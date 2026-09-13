@@ -7,6 +7,7 @@ const sec = { app_password: "abcd efgh ijkl" };
 describe("wordpress.test", () => {
   it("succeeds and reports the user name and role", async () => {
     const f = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      if (String(url).includes("/jamsam/v1/ping")) return new Response(JSON.stringify({ ok: true, version: "1.0.0" }), { status: 200 });
       expect(String(url)).toBe("https://client.com/wp-json/wp/v2/users/me?context=edit");
       expect((init?.headers as Record<string, string>).Authorization).toBe(
         "Basic " + Buffer.from("jamie:abcd efgh ijkl").toString("base64"),
@@ -14,7 +15,7 @@ describe("wordpress.test", () => {
       return new Response(JSON.stringify({ name: "Jamie", roles: ["administrator"] }), { status: 200 });
     });
     const r = await wordpress.test(cfg, sec, f as unknown as typeof fetch);
-    expect(r).toEqual({ ok: true, detail: "Signed in as Jamie (administrator)" });
+    expect(r).toEqual({ ok: true, detail: "Signed in as Jamie (administrator). JamSam helper: installed" });
   });
   it("fails with a readable message on 401", async () => {
     const f = vi.fn(async () => new Response(JSON.stringify({ message: "Sorry, you are not allowed" }), { status: 401 }));
