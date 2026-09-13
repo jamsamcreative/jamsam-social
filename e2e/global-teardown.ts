@@ -8,5 +8,6 @@ export default async function globalTeardown() {
   if (!url || !key) return;
   const headers = { apikey: key, Authorization: `Bearer ${key}` };
   await fetch(`${url}/rest/v1/posts?title=like.E2E%20post%20*`, { method: "DELETE", headers });
+  await fetch(`${url}/rest/v1/articles?title=like.E2E%20article%20*`, { method: "DELETE", headers });
   await fetch(`${url}/rest/v1/brands?slug=like.e2e-brand-*`, { method: "DELETE", headers });
 }
