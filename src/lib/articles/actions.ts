@@ -178,12 +178,16 @@ export async function syncArticle(id: string): Promise<ActionResult> {
   try {
     const res = await getPost(client, a.wp_post_id);
     const admin = createAdminSupabase();
-    const patch: Record<string, unknown> = { wp_status: res.status, wp_link: res.link, last_error: null };
-    if (res.status === "publish") {
-      patch.status = "published";
-      patch.published_at = res.date_gmt ? `${res.date_gmt}Z` : a.published_at;
-    }
-    await admin.from("articles").update(patch).eq("id", id);
+    const isLive = res.status === "publish";
+    await admin
+      .from("articles")
+      .update({
+        wp_status: res.status,
+        wp_link: res.link,
+        last_error: null,
+        ...(isLive ? { status: "published" as const, published_at: res.date_gmt ? `${res.date_gmt}Z` : a.published_at } : {}),
+      })
+      .eq("id", id);
     refresh(id);
     return { ok: true };
   } catch (e) {
