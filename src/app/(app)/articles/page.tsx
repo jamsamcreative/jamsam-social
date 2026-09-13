@@ -67,7 +67,7 @@ export default async function ArticlesPage({ searchParams }: { searchParams: Pro
                 </p>
               </div>
               {a.wp_link && (
-                <span className="text-xs text-muted-foreground" onClick={(e) => e.preventDefault()}>
+                <span className="text-xs text-muted-foreground">
                   in WP
                 </span>
               )}
