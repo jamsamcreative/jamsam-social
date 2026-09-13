@@ -34,6 +34,8 @@ test("login, create brand, upload image, see it in library", async ({ page }) =>
   // Select the new brand in the header, then upload.
   await page.getByRole("combobox").click();
   await page.getByRole("option", { name: brandName }).click();
+  await expect(page.getByRole("combobox")).toContainText(brandName);
+  await page.waitForTimeout(500);
   await page.goto("/media");
   await expect(page.getByText(`${brandName} library`)).toBeVisible();
   await page.getByLabel("Images").setInputFiles(path.join(__dirname, "fixtures/pixel.png"));
