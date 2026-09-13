@@ -54,6 +54,15 @@ export function ConnectionFields({ provider, config }: { provider: Provider; con
             autoComplete="off"
           />
           {f.help && <p className="text-xs text-muted-foreground">{f.help}</p>}
+          {provider === "wordpress" && f.name === "app_password" && (
+            <p className="text-xs text-muted-foreground">
+              For Yoast SEO fields, install the{" "}
+              <a href="/api/wp-plugin/jamsam-connector.zip" className="underline">
+                JamSam helper plugin
+              </a>{" "}
+              on the site (Plugins → Add New → Upload Plugin).
+            </p>
+          )}
         </div>
       ))}
     </div>
