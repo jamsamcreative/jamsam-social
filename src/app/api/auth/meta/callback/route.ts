@@ -41,7 +41,8 @@ export async function GET(req: NextRequest) {
       return back(slug, { meta_connected: pages[0].name });
     }
     const res = NextResponse.redirect(new URL(`/brands/${slug}/connections/meta/pick`, env.NEXT_PUBLIC_APP_URL));
-    res.cookies.set("meta_pages", encryptJson({ brandId: brand.id, me, pages }), {
+    // Only the (single) user token goes in the cookie; the picker re-lists Pages. Page tokens are too big for a cookie.
+    res.cookies.set("meta_pages", encryptJson({ brandId: brand.id, me, userToken: token }), {
       httpOnly: true, sameSite: "lax", secure: env.NEXT_PUBLIC_APP_URL.startsWith("https"), path: "/", maxAge: 600,
     });
     res.cookies.delete("meta_oauth_nonce");
