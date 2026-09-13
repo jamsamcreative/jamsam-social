@@ -1,4 +1,4 @@
-// TEMPORARY hand-written stub. Replaced by `npm run db:types` once the migration is applied.
+// Hand-written to match supabase/migrations/0001_foundation.sql. Regenerate with `npm run db:types` after `npx supabase login && npx supabase link`.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 type BrandRow = {
