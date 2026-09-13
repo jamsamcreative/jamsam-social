@@ -5,6 +5,7 @@ import { listMediaAssets } from "@/lib/media/queries";
 import { getBrandBySlug } from "@/lib/brands/queries";
 import { PostForm } from "@/components/posts/post-form";
 import { PostActions } from "@/components/posts/post-actions";
+import { RefreshInsights } from "@/components/posts/refresh-insights";
 import { PostStatusBadge, TargetStatusBadge } from "@/components/posts/status-badge";
 import { PLATFORM_LABELS } from "@/lib/posts/status";
 import { formatInZone } from "@/lib/time/zoned";
@@ -40,7 +41,10 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
             )}
           </p>
         </div>
-        <PostActions post={post} />
+        <div className="flex flex-wrap items-center gap-2">
+          <PostActions post={post} />
+          {post.status === "published" && <RefreshInsights postId={post.id} />}
+        </div>
       </div>
 
       <section className="rounded-lg border">
