@@ -42,6 +42,8 @@ describe("wp client", () => {
   it("detects the helper plugin", async () => {
     const f = mock((u) => {
       const ping = u.pathname.endsWith("/jamsam/v1/ping");
+      // Hosts like WP Engine cache the 404 from before the plugin was installed; the ping must cache-bust.
+      if (ping) expect(u.searchParams.get("_")).toMatch(/^\d+$/);
       return new Response(ping ? JSON.stringify({ ok: true, version: "1.0.0" }) : "{}", { status: ping ? 200 : 404 });
     });
     expect(await checkHelper(createWpClient(cfg, sec, f))).toEqual({ installed: true, version: "1.0.0" });

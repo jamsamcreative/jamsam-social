@@ -111,7 +111,8 @@ export async function getPost(client: WpClient, id: number): Promise<WpPostResul
 
 export async function checkHelper(client: WpClient): Promise<{ installed: boolean; version?: string }> {
   try {
-    const { data } = await client.get<{ ok?: boolean; version?: string }>("/jamsam/v1/ping");
+    // Cache-bust: page caches (e.g. WP Engine) hold the pre-install 404 for minutes.
+    const { data } = await client.get<{ ok?: boolean; version?: string }>("/jamsam/v1/ping", { _: String(Date.now()) });
     return data.ok ? { installed: true, version: data.version } : { installed: false };
   } catch {
     return { installed: false };
