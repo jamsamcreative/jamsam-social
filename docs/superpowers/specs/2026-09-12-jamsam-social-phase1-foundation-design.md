@@ -50,7 +50,7 @@ Each phase gets its own spec and implementation plan.
 - Project scaffold, linting, CI (GitHub Actions: typecheck, lint, unit tests)
 - Supabase migrations under `supabase/migrations`, run via Supabase CLI
 - Auth: email + password login via Supabase Auth; no public signup. Users are invited from the Supabase dashboard. Login page copy: "JamSam Digital team access only."
-- App shell: sidebar nav (Dashboard, Brands, Media, Settings), brand switcher in header, JamSam Digital branding
+- App shell: sidebar nav (Dashboard, Brands, Media), brand switcher in header, JamSam Digital branding
 - Brands: list, create, edit, archive
 - Brand connections: per-brand settings tabs for Website/WordPress, Meta, Pinterest, SEMrush, each with "Test connection" that makes a real API call server-side and reports success/failure
 - Brand guideline documents: markdown docs per brand, of kind `social_style | social_post_spec | blog_style | blog_post_spec | pin_spec`; edit in-app
