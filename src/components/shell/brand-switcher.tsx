@@ -8,9 +8,14 @@ export function BrandSwitcher({ brands, current }: { brands: Brand[]; current: s
   const [pending, start] = useTransition();
   if (brands.length === 0) return <span className="text-sm text-muted-foreground">No brands yet</span>;
   return (
-    <Select value={current ?? undefined} onValueChange={(slug) => slug && start(() => setCurrentBrand(slug))} disabled={pending}>
+    <Select
+      value={current ?? undefined}
+      onValueChange={(slug) => slug && start(() => setCurrentBrand(slug))}
+      disabled={pending}
+      items={brands.map((b) => ({ value: b.slug, label: b.name }))}
+    >
       <SelectTrigger className="w-56">
-        <SelectValue placeholder="Select a brand" />
+        <SelectValue placeholder="Select a brand">{(value: string | null) => brands.find((b) => b.slug === value)?.name ?? "Select a brand"}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         {brands.map((b) => (

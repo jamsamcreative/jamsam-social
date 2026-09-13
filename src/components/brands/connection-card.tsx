@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConnectionFields } from "./connection-forms";
+import { MetaConnect } from "./meta-connect";
 import { saveAndTestConnection, type ActionResult } from "@/lib/connections/actions";
 import { PROVIDER_LABELS, type Provider } from "@/lib/connections/types";
 import type { ConnectionPublic } from "@/lib/connections/queries";
@@ -17,10 +18,12 @@ export function StatusBadge({ status }: { status: ConnectionPublic["status"] | "
 
 export function ConnectionCard({
   brandId,
+  slug,
   provider,
   connection,
 }: {
   brandId: string;
+  slug: string;
   provider: Provider;
   connection: ConnectionPublic | null;
 }) {
@@ -51,12 +54,10 @@ export function ConnectionCard({
         <StatusBadge status={status} />
       </CardHeader>
       <CardContent className="space-y-4">
-        {provider === "meta" && typeof cfg.page_name === "string" && (
-          <p className="text-sm text-muted-foreground">
-            Page: {cfg.page_name}
-            {typeof cfg.ig_username === "string" && cfg.ig_username ? ` · Instagram @${cfg.ig_username}` : " · Instagram not linked"}
-          </p>
+        {provider === "meta" && (
+          <MetaConnect brandId={brandId} slug={slug} connected={connection ? (cfg as { page_name?: string; ig_username?: string | null; connected_via?: string }) : null} />
         )}
+        {provider === "meta" && <p className="text-xs text-muted-foreground">Or paste a long-lived Page token below.</p>}
         <form action={formAction} className="space-y-4">
           <ConnectionFields provider={provider} config={cfg} />
           {shown && (
