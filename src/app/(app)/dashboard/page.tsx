@@ -4,6 +4,7 @@ import { PROVIDER_ORDER, PROVIDER_LABELS } from "@/lib/connections";
 import { StatusBadge } from "@/components/brands/connection-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { formatInZone } from "@/lib/time/zoned";
 
 export const metadata = { title: "Dashboard" };
 
@@ -38,6 +39,17 @@ export default async function DashboardPage() {
                     </li>
                   ))}
                 </ul>
+                <p className="text-xs text-muted-foreground">
+                  {b.pending_approval_count > 0 ? (
+                    <Link href="/posts?status=pending" className="font-medium text-amber-700 underline">
+                      {b.pending_approval_count} awaiting approval
+                    </Link>
+                  ) : (
+                    "Nothing awaiting approval"
+                  )}
+                  {" · "}
+                  {b.next_scheduled ? `next: ${formatInZone(b.next_scheduled.at, b.timezone)} ${b.next_scheduled.title}` : "nothing scheduled"}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {b.media_count} image{b.media_count === 1 ? "" : "s"} in library ·{" "}
                   <Link href={`/brands/${b.slug}/connections`} className="underline">
