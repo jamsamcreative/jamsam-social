@@ -7,6 +7,9 @@ const good = {
   SUPABASE_SERVICE_ROLE_KEY: "service",
   CONNECTIONS_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
   NEXT_PUBLIC_APP_URL: "http://localhost:3000",
+  META_APP_ID: "123",
+  META_APP_SECRET: "shh",
+  CRON_SECRET: "test-cron-secret-0000",
 };
 
 describe("parseEnv", () => {

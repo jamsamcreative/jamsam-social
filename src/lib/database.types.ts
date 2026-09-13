@@ -18,6 +18,20 @@ type MediaRow = {
   id: string; brand_id: string; storage_path: string; public_url: string; filename: string; mime_type: string;
   width: number | null; height: number | null; alt_text: string | null; tags: string[]; uploaded_by: string | null; created_at: string;
 };
+export type MediaItem = { url: string; alt?: string | null; media_asset_id?: string | null };
+type PostRow = {
+  id: string; brand_id: string; title: string; link_url: string | null; media: Json;
+  source: "manual" | "recycled" | "ai"; recycled_from: string | null;
+  status: "draft" | "pending_approval" | "approved" | "publishing" | "published" | "failed" | "archived";
+  created_by: string | null; approved_by: string | null; approved_at: string | null; created_at: string; updated_at: string;
+};
+type PostTargetRow = {
+  id: string; post_id: string; platform: "facebook" | "instagram"; caption: string; scheduled_at: string | null;
+  status: "pending" | "publishing" | "published" | "failed"; external_id: string | null; external_url: string | null;
+  published_at: string | null; error: string | null; attempts: number; claimed_at: string | null;
+  insights: Json | null; insights_fetched_at: string | null; created_at: string; updated_at: string;
+};
+type AppSettingRow = { key: string; value: string };
 type Table<R, Req extends keyof R> = {
   Row: R;
   Insert: Pick<R, Req> & Partial<Omit<R, Req>>;
@@ -32,13 +46,23 @@ export type Database = {
       brand_connections: Table<ConnectionRow, "brand_id" | "provider">;
       brand_guidelines: Table<GuidelineRow, "brand_id" | "kind">;
       media_assets: Table<MediaRow, "brand_id" | "storage_path" | "public_url" | "filename" | "mime_type">;
+      posts: Table<PostRow, "brand_id" | "title">;
+      post_targets: Table<PostTargetRow, "post_id" | "platform">;
+      app_settings: Table<AppSettingRow, "key" | "value">;
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      claim_due_targets: { Args: { max_rows?: number }; Returns: PostTargetRow[] };
+      reset_stale_targets: { Args: Record<string, never>; Returns: number };
+    };
     Enums: {
       connection_provider: ConnectionRow["provider"];
       connection_status: ConnectionRow["status"];
       guideline_kind: GuidelineRow["kind"];
+      post_status: PostRow["status"];
+      post_source: PostRow["source"];
+      social_platform: PostTargetRow["platform"];
+      target_status: PostTargetRow["status"];
     };
     CompositeTypes: Record<string, never>;
   };

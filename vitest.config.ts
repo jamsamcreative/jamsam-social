@@ -15,6 +15,9 @@ export default defineConfig({
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-test-key",
       SUPABASE_SERVICE_ROLE_KEY: "service-test-key",
       NEXT_PUBLIC_APP_URL: "http://localhost:3000",
+      META_APP_ID: "123",
+      META_APP_SECRET: "shh",
+      CRON_SECRET: "test-cron-secret-0000",
     },
   },
   resolve: {
