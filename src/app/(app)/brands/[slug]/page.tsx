@@ -24,7 +24,7 @@ export default async function BrandOverviewPage({ params }: { params: Promise<{ 
           {!brand.active && <Badge variant="secondary">Archived</Badge>}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" render={<Link href={`/brands/${brand.slug}/edit`} />}>
+          <Button variant="outline" nativeButton={false} render={<Link href={`/brands/${brand.slug}/edit`} />}>
             Edit
           </Button>
           <form action={toggle}>

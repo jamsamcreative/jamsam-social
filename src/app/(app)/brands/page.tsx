@@ -12,7 +12,7 @@ export default async function BrandsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Brands</h1>
-        <Button render={<Link href="/brands/new" />}>New brand</Button>
+        <Button nativeButton={false} render={<Link href="/brands/new" />}>New brand</Button>
       </div>
       {brands.length === 0 ? (
         <p className="text-muted-foreground">No brands yet. Create your first client.</p>
