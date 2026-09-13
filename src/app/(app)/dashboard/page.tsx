@@ -51,7 +51,7 @@ export default async function DashboardPage() {
                   {b.next_scheduled ? `next: ${formatInZone(b.next_scheduled.at, b.timezone)} ${b.next_scheduled.title}` : "nothing scheduled"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {b.media_count} image{b.media_count === 1 ? "" : "s"} in library ·{" "}
+                  {b.article_draft_count} article draft{b.article_draft_count === 1 ? "" : "s"} · {b.media_count} image{b.media_count === 1 ? "" : "s"} in library ·{" "}
                   <Link href={`/brands/${b.slug}/connections`} className="underline">
                     Connections
                   </Link>

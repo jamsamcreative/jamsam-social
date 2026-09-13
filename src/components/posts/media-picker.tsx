@@ -6,10 +6,37 @@ import { Input } from "@/components/ui/input";
 import type { MediaItem } from "@/lib/database.types";
 import type { MediaAsset } from "@/lib/media/queries";
 
-export function MediaPicker({ assets, value, onChange, max = 10 }: { assets: MediaAsset[]; value: MediaItem[]; onChange: (v: MediaItem[]) => void; max?: number }) {
-  const [open, setOpen] = useState(false);
+export function MediaPicker({
+  assets,
+  value,
+  onChange,
+  max = 10,
+  pickOne,
+  openExternal,
+  onOpenChange,
+}: {
+  assets: MediaAsset[];
+  value: MediaItem[];
+  onChange: (v: MediaItem[]) => void;
+  max?: number;
+  /** Single-pick mode: called with the chosen item, dialog closes, selection strip hidden. */
+  pickOne?: (item: MediaItem) => void;
+  openExternal?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
+  const [openState, setOpenState] = useState(false);
+  const open = openExternal ?? openState;
+  const setOpen = (o: boolean) => {
+    setOpenState(o);
+    onOpenChange?.(o);
+  };
   const [url, setUrl] = useState("");
   const add = (item: MediaItem) => {
+    if (pickOne) {
+      pickOne(item);
+      setOpen(false);
+      return;
+    }
     if (value.length < max && !value.some((v) => v.url === item.url)) onChange([...value, item]);
   };
   const move = (i: number, d: -1 | 1) => {
@@ -21,7 +48,7 @@ export function MediaPicker({ assets, value, onChange, max = 10 }: { assets: Med
   };
   return (
     <div className="space-y-2">
-      {value.length > 0 && (
+      {!pickOne && value.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {value.map((m, i) => (
             <div key={m.url} className="w-24">
@@ -43,7 +70,7 @@ export function MediaPicker({ assets, value, onChange, max = 10 }: { assets: Med
         </div>
       )}
       <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="outline" onClick={() => setOpen(true)} disabled={value.length >= max}>
+        <Button type="button" variant="outline" onClick={() => setOpen(true)} disabled={!pickOne && value.length >= max}>
           Choose from library
         </Button>
         <Input placeholder="or paste an image URL" value={url} onChange={(e) => setUrl(e.target.value)} className="max-w-sm" />
@@ -56,14 +83,16 @@ export function MediaPicker({ assets, value, onChange, max = 10 }: { assets: Med
               setUrl("");
             }
           }}
-          disabled={!url || value.length >= max}
+          disabled={!url || (!pickOne && value.length >= max)}
         >
           Add URL
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">
-        {value.length}/{max} images. First image is the cover.
-      </p>
+      {!pickOne && (
+        <p className="text-xs text-muted-foreground">
+          {value.length}/{max} images. First image is the cover.
+        </p>
+      )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>

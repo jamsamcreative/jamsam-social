@@ -32,6 +32,16 @@ type PostTargetRow = {
   insights: Json | null; insights_fetched_at: string | null; created_at: string; updated_at: string;
 };
 type AppSettingRow = { key: string; value: string };
+export type TermRef = { id: number; name: string };
+type ArticleRow = {
+  id: string; brand_id: string; title: string; slug: string; content_html: string; excerpt: string | null;
+  seo_title: string | null; meta_description: string | null; primary_keyword: string | null; secondary_keywords: string[];
+  featured_media: Json | null; categories: Json; tags: Json; decision: "new" | "rewrite" | "optimize"; rationale: string | null;
+  source: "manual" | "ai"; status: "draft" | "pushed_to_wp" | "published" | "archived";
+  wp_post_id: number | null; wp_link: string | null; wp_status: string | null; pushed_at: string | null; published_at: string | null;
+  last_error: string | null; created_by: string | null; created_at: string; updated_at: string;
+};
+type ArticleMediaMapRow = { id: string; brand_id: string; source_url: string; wp_media_id: number; wp_url: string; created_at: string };
 type Table<R, Req extends keyof R> = {
   Row: R;
   Insert: Pick<R, Req> & Partial<Omit<R, Req>>;
@@ -49,6 +59,8 @@ export type Database = {
       posts: Table<PostRow, "brand_id" | "title">;
       post_targets: Table<PostTargetRow, "post_id" | "platform">;
       app_settings: Table<AppSettingRow, "key" | "value">;
+      articles: Table<ArticleRow, "brand_id" | "title" | "slug">;
+      article_media_map: Table<ArticleMediaMapRow, "brand_id" | "source_url" | "wp_media_id" | "wp_url">;
     };
     Views: Record<string, never>;
     Functions: {
@@ -63,6 +75,9 @@ export type Database = {
       post_source: PostRow["source"];
       social_platform: PostTargetRow["platform"];
       target_status: PostTargetRow["status"];
+      article_status: ArticleRow["status"];
+      article_decision: ArticleRow["decision"];
+      article_source: ArticleRow["source"];
     };
     CompositeTypes: Record<string, never>;
   };

@@ -9,6 +9,7 @@ export type DashboardBrand = Brand & {
   media_count: number;
   pending_approval_count: number;
   next_scheduled: { at: string; title: string } | null;
+  article_draft_count: number;
 };
 
 export async function getDashboardBrands(): Promise<DashboardBrand[]> {
@@ -18,7 +19,7 @@ export async function getDashboardBrands(): Promise<DashboardBrand[]> {
   if (ids.length === 0) return [];
 
   const nowIso = new Date().toISOString();
-  const [{ data: conns, error: cErr }, { data: media, error: mErr }, { data: pendingPosts }, { data: upcoming }] = await Promise.all([
+  const [{ data: conns, error: cErr }, { data: media, error: mErr }, { data: pendingPosts }, { data: upcoming }, { data: draftArticles }] = await Promise.all([
     supabase.from("brand_connections").select("brand_id,provider,status").in("brand_id", ids),
     supabase.from("media_assets").select("brand_id").in("brand_id", ids),
     supabase.from("posts").select("brand_id").in("brand_id", ids).eq("status", "pending_approval"),
@@ -30,6 +31,7 @@ export async function getDashboardBrands(): Promise<DashboardBrand[]> {
       .in("post.status", ["approved", "publishing"])
       .gte("scheduled_at", nowIso)
       .order("scheduled_at", { ascending: true }),
+    supabase.from("articles").select("brand_id").in("brand_id", ids).eq("status", "draft"),
   ]);
   if (cErr) throw new Error(cErr.message);
   if (mErr) throw new Error(mErr.message);
@@ -42,6 +44,7 @@ export async function getDashboardBrands(): Promise<DashboardBrand[]> {
     const pending_approval_count = (pendingPosts ?? []).filter((p) => p.brand_id === b.id).length;
     const nextUp = ((upcoming ?? []) as unknown as Up[]).find((u) => u.post.brand_id === b.id && u.scheduled_at);
     const next_scheduled = nextUp ? { at: nextUp.scheduled_at!, title: nextUp.post.title } : null;
-    return { ...b, connections, media_count, pending_approval_count, next_scheduled };
+    const article_draft_count = (draftArticles ?? []).filter((a) => a.brand_id === b.id).length;
+    return { ...b, connections, media_count, pending_approval_count, next_scheduled, article_draft_count };
   });
 }

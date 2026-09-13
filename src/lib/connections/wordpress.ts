@@ -1,24 +1,10 @@
-import { z } from "zod";
 import type { ConnectionProvider, TestResult } from "./types";
 import { fetchWithTimeout, errorMessage } from "./http";
+import { wordpressConfigSchema, wordpressSecretSchema, wpAuthHeader, wpBase, type WordpressConfig, type WordpressSecret } from "./wordpress-shared";
+import { checkHelper, createWpClient } from "@/lib/wordpress/client";
 
-export const wordpressConfigSchema = z.object({
-  site_url: z.string().url("Enter the site URL, e.g. https://client.com"),
-  username: z.string().min(1, "Username is required"),
-});
-export const wordpressSecretSchema = z.object({
-  app_password: z.string().min(1, "Application password is required"),
-});
-export type WordpressConfig = z.infer<typeof wordpressConfigSchema>;
-export type WordpressSecret = z.infer<typeof wordpressSecretSchema>;
-
-export function wpBase(siteUrl: string): string {
-  return siteUrl.replace(/\/+$/, "");
-}
-
-export function wpAuthHeader(username: string, appPassword: string): string {
-  return "Basic " + Buffer.from(`${username}:${appPassword}`).toString("base64");
-}
+export { wordpressConfigSchema, wordpressSecretSchema, wpAuthHeader, wpBase };
+export type { WordpressConfig, WordpressSecret };
 
 /** Parse a WP REST response body; returns null when it is not JSON (e.g. an HTML page). */
 async function readJson<T>(res: Response): Promise<T | null> {
@@ -51,7 +37,9 @@ export const wordpress: ConnectionProvider<WordpressConfig, WordpressSecret> = {
         const ct = res.headers.get("content-type")?.split(";")[0] ?? "unknown content type";
         return { ok: false, error: `WordPress did not return JSON (got ${ct}). Check the site URL and that the REST API is enabled.` };
       }
-      return { ok: true, detail: `Signed in as ${body.name ?? config.username} (${(body.roles ?? []).join(", ") || "unknown role"})` };
+      const helper = await checkHelper(createWpClient(config, secret, fetchImpl));
+      const helperNote = helper.installed ? "JamSam helper: installed" : "JamSam helper: not installed (SEO fields will be skipped)";
+      return { ok: true, detail: `Signed in as ${body.name ?? config.username} (${(body.roles ?? []).join(", ") || "unknown role"}). ${helperNote}` };
     } catch (e) {
       return { ok: false, error: errorMessage(e) };
     }
