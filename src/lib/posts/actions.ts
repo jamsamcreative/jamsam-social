@@ -6,6 +6,7 @@ import { parsePostForm } from "./schema";
 import { validateForSubmit, PLATFORMS } from "./status";
 import { zonedLocalToUtc } from "@/lib/time/zoned";
 import type { Json } from "@/lib/database.types";
+import type { Post, PostTarget } from "./queries";
 
 export type ActionResult = { ok: true; id?: string } | { ok: false; error: string };
 
@@ -17,11 +18,16 @@ async function ctx() {
   return { supabase, user };
 }
 
-async function loadPostForAction(id: string) {
+type Loaded =
+  | { error: string; supabase?: undefined; user?: undefined; post?: undefined }
+  | { error?: undefined; supabase: Awaited<ReturnType<typeof createServerSupabase>>; user: { id: string }; post: Post & { targets: PostTarget[] } };
+
+async function loadPostForAction(id: string): Promise<Loaded> {
   const { supabase, user } = await ctx();
-  if (!user) return { error: "Not signed in" as const };
-  const { data: post } = await supabase.from("posts").select("*, targets:post_targets(*)").eq("id", id).maybeSingle();
-  if (!post) return { error: "Post not found" as const };
+  if (!user) return { error: "Not signed in" };
+  const { data } = await supabase.from("posts").select("*, targets:post_targets(*)").eq("id", id).maybeSingle();
+  if (!data) return { error: "Post not found" };
+  const post = data as unknown as Post & { targets: PostTarget[] };
   return { supabase, user, post };
 }
 
@@ -78,7 +84,7 @@ export async function savePost(_prev: ActionResult | null, formData: FormData): 
 
 export async function submitForApproval(id: string): Promise<ActionResult> {
   const r = await loadPostForAction(id);
-  if ("error" in r) return { ok: false, error: r.error };
+  if (r.error !== undefined) return { ok: false, error: r.error };
   if (r.post.status !== "draft") return { ok: false, error: "Only drafts can be submitted" };
   const media = (r.post.media as unknown[]) ?? [];
   const msg = validateForSubmit({
@@ -96,7 +102,7 @@ export async function submitForApproval(id: string): Promise<ActionResult> {
 
 export async function approvePost(id: string): Promise<ActionResult> {
   const r = await loadPostForAction(id);
-  if ("error" in r) return { ok: false, error: r.error };
+  if (r.error !== undefined) return { ok: false, error: r.error };
   if (r.post.status !== "pending_approval") return { ok: false, error: "Post is not awaiting approval" };
   await r.supabase.from("posts").update({ status: "approved", approved_by: r.user.id, approved_at: new Date().toISOString() }).eq("id", id);
   refresh();
@@ -105,7 +111,7 @@ export async function approvePost(id: string): Promise<ActionResult> {
 
 export async function rejectPost(id: string): Promise<ActionResult> {
   const r = await loadPostForAction(id);
-  if ("error" in r) return { ok: false, error: r.error };
+  if (r.error !== undefined) return { ok: false, error: r.error };
   if (r.post.status !== "pending_approval") return { ok: false, error: "Post is not awaiting approval" };
   await r.supabase.from("posts").update({ status: "draft" }).eq("id", id);
   refresh();
@@ -114,7 +120,7 @@ export async function rejectPost(id: string): Promise<ActionResult> {
 
 export async function publishNow(id: string): Promise<ActionResult> {
   const r = await loadPostForAction(id);
-  if ("error" in r) return { ok: false, error: r.error };
+  if (r.error !== undefined) return { ok: false, error: r.error };
   if (!["draft", "pending_approval", "approved", "failed"].includes(r.post.status)) return { ok: false, error: "Post cannot be published from its current state" };
   const media = (r.post.media as unknown[]) ?? [];
   const msg = validateForSubmit({
@@ -131,7 +137,7 @@ export async function publishNow(id: string): Promise<ActionResult> {
 
 export async function recyclePost(id: string): Promise<ActionResult> {
   const r = await loadPostForAction(id);
-  if ("error" in r) return { ok: false, error: r.error };
+  if (r.error !== undefined) return { ok: false, error: r.error };
   const { data: created, error } = await r.supabase
     .from("posts")
     .insert({
@@ -145,17 +151,18 @@ export async function recyclePost(id: string): Promise<ActionResult> {
     })
     .select("id")
     .single();
-  if (error || !created) return { ok: false, error: error?.message ?? "Could not recycle" };
+  if (error || !created?.id) return { ok: false, error: error?.message ?? "Could not recycle" };
+  const newId: string = created.id;
   if (r.post.targets.length) {
-    await r.supabase.from("post_targets").insert(r.post.targets.map((t) => ({ post_id: created.id, platform: t.platform, caption: t.caption })));
+    await r.supabase.from("post_targets").insert(r.post.targets.map((t) => ({ post_id: newId, platform: t.platform, caption: t.caption })));
   }
   refresh();
-  redirect(`/posts/${created.id}`);
+  redirect(`/posts/${newId}`);
 }
 
 export async function archivePost(id: string): Promise<ActionResult> {
   const r = await loadPostForAction(id);
-  if ("error" in r) return { ok: false, error: r.error };
+  if (r.error !== undefined) return { ok: false, error: r.error };
   if (r.post.status === "publishing") return { ok: false, error: "Wait for publishing to finish" };
   await r.supabase.from("posts").update({ status: "archived" }).eq("id", id);
   refresh();
