@@ -30,3 +30,11 @@ describe("wordpress.test", () => {
     expect(r).toEqual({ ok: false, error: "Request timed out after 10s" });
   });
 });
+
+describe("wordpress.test non-JSON responses", () => {
+  it("explains when the site returns HTML instead of the REST API", async () => {
+    const f = vi.fn(async () => new Response("<!DOCTYPE html><html>...</html>", { status: 200, headers: { "content-type": "text/html" } }));
+    const r = await wordpress.test(cfg, sec, f as unknown as typeof fetch);
+    expect(r).toEqual({ ok: false, error: "WordPress did not return JSON (got text/html). Check the site URL and that the REST API is enabled." });
+  });
+});

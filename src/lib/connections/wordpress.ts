@@ -20,6 +20,16 @@ export function wpAuthHeader(username: string, appPassword: string): string {
   return "Basic " + Buffer.from(`${username}:${appPassword}`).toString("base64");
 }
 
+/** Parse a WP REST response body; returns null when it is not JSON (e.g. an HTML page). */
+async function readJson<T>(res: Response): Promise<T | null> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
 export const wordpress: ConnectionProvider<WordpressConfig, WordpressSecret> = {
   provider: "wordpress",
   configSchema: wordpressConfigSchema,
@@ -32,15 +42,16 @@ export const wordpress: ConnectionProvider<WordpressConfig, WordpressSecret> = {
         10_000,
         fetchImpl,
       );
+      const body = await readJson<{ name?: string; roles?: string[]; message?: string }>(res);
       if (!res.ok) {
-        let msg = "";
-        try {
-          msg = ((await res.json()) as { message?: string }).message ?? "";
-        } catch {}
+        const msg = body?.message ?? "";
         return { ok: false, error: `WordPress responded ${res.status}${msg ? `: ${msg}` : ""}` };
       }
-      const me = (await res.json()) as { name?: string; roles?: string[] };
-      return { ok: true, detail: `Signed in as ${me.name ?? config.username} (${(me.roles ?? []).join(", ") || "unknown role"})` };
+      if (!body) {
+        const ct = res.headers.get("content-type")?.split(";")[0] ?? "unknown content type";
+        return { ok: false, error: `WordPress did not return JSON (got ${ct}). Check the site URL and that the REST API is enabled.` };
+      }
+      return { ok: true, detail: `Signed in as ${body.name ?? config.username} (${(body.roles ?? []).join(", ") || "unknown role"})` };
     } catch (e) {
       return { ok: false, error: errorMessage(e) };
     }
