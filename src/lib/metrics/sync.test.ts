@@ -7,7 +7,16 @@ function deps(over: Partial<SyncDeps> = {}): SyncDeps & { upserts: unknown[][]; 
   return {
     store: { upsertRows: vi.fn(async (_b, rows) => void upserts.push(rows)), recordRun: vi.fn(async (_b, source, patch) => void runs.push({ source, ...patch })) },
     ga4: { runReport: vi.fn(async (_p, body) => ({ rows: body.dimensions?.length === 2 ? [{ dims: ["20260911", body.dimensions[1].name === "sessionDefaultChannelGroup" ? "Organic Search" : "Roofing"], metrics: [10, 5, 1, 1, 0] }] : [{ dims: ["20260911"], metrics: [10, 1] }] })) },
-    gsc: { query: vi.fn(async (_s, body) => ({ rows: body.dimensions.length === 1 ? [{ keys: ["2026-09-09"], clicks: 1, impressions: 10, ctr: 0.1, position: 5 }] : [{ keys: ["2026-09-09", "q1"], clicks: 3, impressions: 10, ctr: 0.3, position: 5 }, { keys: ["2026-09-09", "q2"], clicks: 1, impressions: 10, ctr: 0.1, position: 8 }] })) },
+    gsc: {
+      query: vi.fn(async (_s, body) => ({
+        rows:
+          body.dimensions.length === 1
+            ? [{ keys: ["2026-09-09"], clicks: 1, impressions: 10, ctr: 0.1, position: 5 }]
+            : body.dimensions.length === 3
+              ? [{ keys: ["2026-09-09", "q1", "https://x.com/a/"], clicks: 3, impressions: 10, ctr: 0.3, position: 5 }]
+              : [{ keys: ["2026-09-09", "q1"], clicks: 3, impressions: 10, ctr: 0.3, position: 5 }, { keys: ["2026-09-09", "q2"], clicks: 1, impressions: 10, ctr: 0.1, position: 8 }],
+      })),
+    },
     metaAds: { insights: vi.fn(async (_a, _t, o) => [{ date_start: "2026-09-11", date_stop: "2026-09-11", campaign_id: o.level === "campaign" ? "c1" : undefined, campaign_name: "A", spend: "5", clicks: "2", impressions: "100" }]) },
     today: "2026-09-14",
     upserts,
@@ -22,7 +31,7 @@ describe("syncBrand", () => {
     const d = deps();
     const r = await syncBrand("b1", conns, d);
     expect(r.ga4).toMatchObject({ ok: true, rows: 3 }); // channel + total + campaign
-    expect(r.gsc).toMatchObject({ ok: true, rows: 5 }); // total + 2 queries + 2 pages
+    expect(r.gsc).toMatchObject({ ok: true, rows: 6 }); // total + 2 queries + 2 pages + 1 query|page
     expect(r.meta_ads).toMatchObject({ ok: true, rows: 2 });
     const ga4Body = (d.ga4!.runReport as ReturnType<typeof vi.fn>).mock.calls[0][1];
     expect(ga4Body.dateRanges).toEqual([{ startDate: "2026-09-11", endDate: "2026-09-13" }]);

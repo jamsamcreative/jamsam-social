@@ -4,6 +4,7 @@ import { fetchWithTimeout, errorMessage } from "./http";
 
 export const semrushConfigSchema = z.object({
   database: z.string().min(2).default("us"),
+  competitors: z.preprocess((v) => (typeof v === "string" ? v.split(",").map((s) => s.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "")).filter(Boolean) : v), z.array(z.string()).max(5).default([])),
 });
 export const semrushSecretSchema = z.object({
   api_key: z.string().min(1, "API key is required"),

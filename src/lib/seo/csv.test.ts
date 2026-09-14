@@ -8,7 +8,7 @@ describe("csv", () => {
   it("generic keyword CSV with aliases and a cluster column", () => {
     const r = parseKeywordCsv("Keyword,Search Volume,KD %,Intent,Competitor,Position,Topic\n Horse Barns ,3600,39,Commercial,https://www.dcbuilding.com/x,17,Agricultural\n,1,2,,,\nhorse barns,100,10,,,,\n");
     expect(r.layout).toBe("generic");
-    expect(r.rows).toEqual([{ keyword: "horse barns", cluster: "Agricultural", volume: 100, difficulty: 10, intent: undefined, competitor: undefined, competitor_position: undefined, our_position: undefined }].map((x) => expect.objectContaining({ keyword: "horse barns", volume: 100 })));
+    expect(r.rows).toEqual([expect.objectContaining({ keyword: "horse barns", volume: 100, difficulty: 10 })]);
     expect(r.skipped).toBe(2); // blank keyword + duplicate
   });
   it("SEMrush Keyword Gap layout picks the best non-brand domain", () => {
