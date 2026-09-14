@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { createWpClient, listTerms, uploadMediaFromUrl, createPost, checkHelper, WpError } from "@/lib/wordpress/client";
+import { createWpClient, listTerms, uploadMediaFromUrl, createPost, checkHelper, mediaExists, WpError } from "@/lib/wordpress/client";
 
 const cfg = { site_url: "https://client.com/", username: "u" };
 const sec = { app_password: "p" };
@@ -49,5 +49,12 @@ describe("wp client", () => {
     expect(await checkHelper(createWpClient(cfg, sec, f))).toEqual({ installed: true, version: "1.0.0" });
     const g = mock(() => new Response(JSON.stringify({ code: "rest_no_route" }), { status: 404 }));
     expect(await checkHelper(createWpClient(cfg, sec, g))).toEqual({ installed: false });
+  });
+  it("mediaExists distinguishes 404 from other failures", async () => {
+    const f = mock((u) => new Response(u.pathname.endsWith("/media/1") ? JSON.stringify({ id: 1 }) : JSON.stringify({ code: "rest_post_invalid_id" }), { status: u.pathname.endsWith("/media/1") ? 200 : 404 }));
+    expect(await mediaExists(createWpClient(cfg, sec, f), 1)).toBe(true);
+    expect(await mediaExists(createWpClient(cfg, sec, f), 2)).toBe(false);
+    const g = mock(() => new Response("{}", { status: 500 }));
+    await expect(mediaExists(createWpClient(cfg, sec, g), 1)).rejects.toThrow();
   });
 });
