@@ -51,3 +51,18 @@ describe("processTarget", () => {
     expect(d.save).toHaveBeenCalledWith("t1", expect.objectContaining({ error: expect.stringMatching(/instagram/i) }));
   });
 });
+
+describe("processTarget gbp", () => {
+  const gbpTarget = { ...(target as object), id: "t9", platform: "gbp", location_ref: "locations/123" } as never;
+  it("publishes to a Google location with the brand's refresh token", async () => {
+    const d = deps({ loadGbp: vi.fn(async () => ({ secret: { refresh_token: "rt" } })), publishGbp: vi.fn(async () => ({ external_id: "locations/123/localPosts/9", external_url: "https://g.co/x" })) });
+    expect(await processTarget(gbpTarget, d)).toBe("published");
+    expect(d.publishGbp).toHaveBeenCalledWith("locations/123", "rt", { caption: "c", link_url: null, media: [{ url: "u" }] });
+    expect(d.save).toHaveBeenCalledWith("t9", expect.objectContaining({ status: "published", external_id: "locations/123/localPosts/9" }));
+  });
+  it("fails when GBP is not connected", async () => {
+    const d = deps({ loadGbp: vi.fn(async () => null) });
+    expect(await processTarget({ ...(gbpTarget as object), attempts: 3 } as never, d)).toBe("failed");
+    expect(d.save).toHaveBeenCalledWith("t9", expect.objectContaining({ error: expect.stringMatching(/not connected/) }));
+  });
+});

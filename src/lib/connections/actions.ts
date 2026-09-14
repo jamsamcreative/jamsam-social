@@ -38,6 +38,10 @@ export async function runConnectionTest(connectionId: string): Promise<TestResul
   if (result.ok && row.provider === "meta") {
     config = (await enrichMetaConfig(row.config as MetaConfig, secret as MetaSecret)) as Json;
   }
+  if (result.ok && result.configPatch) {
+    const patch = Object.fromEntries(Object.entries(result.configPatch).filter(([, v]) => v !== undefined));
+    config = { ...(config as Record<string, Json>), ...(patch as Record<string, Json>) } as Json;
+  }
 
   await admin
     .from("brand_connections")
@@ -89,6 +93,8 @@ export async function saveAndTestConnection(
     if (!secret.success) return { ok: false, error: secret.error.issues[0]?.message ?? "Invalid credentials" };
     secretCipher = encryptJson(secret.data);
   }
+  // Providers with no secret fields (service-account based) store an empty secret so the row is "complete".
+  if (!secretCipher && secretKeys.length === 0) secretCipher = encryptJson({});
   if (!secretCipher) return { ok: false, error: "Credentials are required" };
 
   const { data: saved, error } = await admin

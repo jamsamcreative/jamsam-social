@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { getBrandBySlug } from "@/lib/brands/queries";
 import { listConnectionsForBrand } from "@/lib/connections/queries";
 import { PROVIDER_ORDER } from "@/lib/connections";
+import { serviceAccount } from "@/lib/google/auth";
+import { env } from "@/lib/env";
 import { ConnectionCard } from "@/components/brands/connection-card";
 import { ConnectionsToast } from "@/components/brands/connections-toast";
 import { Suspense } from "react";
@@ -23,8 +25,8 @@ export default async function ConnectionsPage({ params }: { params: Promise<{ sl
         <ConnectionsToast />
       </Suspense>
       <div className="grid gap-4 lg:grid-cols-2">
-        {PROVIDER_ORDER.map((p) => (
-          <ConnectionCard key={p} brandId={brand.id} slug={brand.slug} provider={p} connection={connections.find((c) => c.provider === p) ?? null} />
+        {[...PROVIDER_ORDER, ...(env.GBP_ENABLED === "true" ? (["gbp"] as const) : [])].map((p) => (
+          <ConnectionCard key={p} brandId={brand.id} slug={brand.slug} provider={p} connection={connections.find((c) => c.provider === p) ?? null} serviceAccountEmail={serviceAccount()?.email ?? null} />
         ))}
       </div>
     </div>

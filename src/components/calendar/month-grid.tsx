@@ -3,6 +3,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import type { Platform } from "@/lib/posts/status";
 import { moveKeepingTime } from "@/lib/calendar/grid";
 import { rescheduleTarget } from "@/lib/posts/actions";
 import { utcToZonedLocal } from "@/lib/time/zoned";
@@ -12,7 +13,7 @@ export type Chip = {
   id: string;
   post_id: string;
   title: string;
-  platform: "facebook" | "instagram";
+  platform: Platform;
   status: "pending" | "publishing" | "published" | "failed";
   scheduled_at: string;
   movable: boolean;
@@ -70,7 +71,7 @@ export function MonthGrid({ days, chipsByDay, timezone, today }: { days: { date:
                 title={`${c.title} · ${c.platform} · ${c.status}`}
                 className={cn("block truncate rounded border px-1 py-0.5", STATUS_CLS[c.status], c.movable && "cursor-grab")}
               >
-                <span className="font-mono">{c.platform === "facebook" ? "FB" : "IG"}</span> {utcToZonedLocal(c.scheduled_at, timezone).slice(11)} {c.title}
+                <span className="font-mono">{c.platform === "facebook" ? "FB" : c.platform === "instagram" ? "IG" : "GBP"}</span> {utcToZonedLocal(c.scheduled_at, timezone).slice(11)} {c.title}
               </Link>
             ))}
           </div>

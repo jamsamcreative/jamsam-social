@@ -15,6 +15,10 @@ const schema = z.object({
   CRON_SECRET: z.string().min(16, "CRON_SECRET must be at least 16 chars (openssl rand -hex 32)"),
   ANTHROPIC_API_KEY: z.string().min(1).optional(), // only needed for the in-app (API) runner
   MCP_TOKEN: z.string().min(32, "MCP_TOKEN must be at least 32 chars (openssl rand -base64 32)"),
+  GOOGLE_SERVICE_ACCOUNT_JSON: z.string().optional(), // enables GA4 + Search Console connections
+  GBP_ENABLED: z.enum(["true", "false"]).default("false"),
+  GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),
+  GOOGLE_OAUTH_CLIENT_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof schema>;
@@ -40,4 +44,8 @@ export const env: Env = parseEnv({
   CRON_SECRET: process.env.CRON_SECRET,
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
   MCP_TOKEN: process.env.MCP_TOKEN,
+  GOOGLE_SERVICE_ACCOUNT_JSON: process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+  GBP_ENABLED: process.env.GBP_ENABLED,
+  GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID,
+  GOOGLE_OAUTH_CLIENT_SECRET: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
 });

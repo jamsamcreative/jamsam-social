@@ -6,6 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConnectionFields } from "./connection-forms";
 import { MetaConnect } from "./meta-connect";
+import { GoogleGrantSteps } from "./google-grant-steps";
+import { Ga4LeadEvents } from "./ga4-lead-events";
+import { MetaAdAccounts } from "./meta-ad-accounts";
+import { GbpLocations } from "./gbp-locations";
 import { saveAndTestConnection, type ActionResult } from "@/lib/connections/actions";
 import { PROVIDER_LABELS, type Provider } from "@/lib/connections/types";
 import type { ConnectionPublic } from "@/lib/connections/queries";
@@ -21,11 +25,13 @@ export function ConnectionCard({
   slug,
   provider,
   connection,
+  serviceAccountEmail = null,
 }: {
   brandId: string;
   slug: string;
   provider: Provider;
   connection: ConnectionPublic | null;
+  serviceAccountEmail?: string | null;
 }) {
   const action = saveAndTestConnection.bind(null, brandId, provider);
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(action, null);
@@ -59,7 +65,21 @@ export function ConnectionCard({
         )}
         {provider === "meta" && <p className="text-xs text-muted-foreground">Or paste a long-lived Page token below.</p>}
         <form action={formAction} className="space-y-4">
-          <ConnectionFields provider={provider} config={cfg} />
+          <ConnectionFields
+            provider={provider}
+            config={cfg}
+            extras={
+              provider === "google_analytics" ? <GoogleGrantSteps email={serviceAccountEmail} product="ga4" /> : provider === "search_console" ? <GoogleGrantSteps email={serviceAccountEmail} product="gsc" /> : null
+            }
+          />
+          {provider === "google_analytics" && (
+            <>
+              <input type="hidden" name="ads_linked" value={String(Boolean(cfg.ads_linked))} />
+              <Ga4LeadEvents initial={(cfg.lead_events as string[] | undefined) ?? []} propertyInputId="google_analytics-property_id" />
+            </>
+          )}
+          {provider === "meta_ads" && <MetaAdAccounts tokenInputId="meta_ads-access_token" accountInputId="meta_ads-ad_account_id" />}
+          {provider === "gbp" && <GbpLocations slug={slug} initial={(cfg.locations as { name: string; title: string; enabled: boolean }[] | undefined) ?? []} connected={Boolean(connection?.has_secret)} />}
           {shown && (
             <p className={shown.ok ? "text-sm text-green-700" : "text-sm text-destructive"}>
               {shown.ok ? shown.detail : shown.error}

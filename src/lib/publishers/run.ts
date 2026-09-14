@@ -1,10 +1,12 @@
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { getConnectionWithSecret } from "@/lib/connections/queries";
 import type { MetaConfig, MetaSecret } from "@/lib/connections/meta";
+import type { GbpSecret } from "@/lib/connections/gbp";
 import type { Database, MediaItem } from "@/lib/database.types";
 import { derivePostStatus, MAX_ATTEMPTS } from "@/lib/posts/status";
 import { publishToFacebook } from "./facebook";
 import { publishToInstagram } from "./instagram";
+import { publishToGbp } from "./gbp";
 import type { PublishInput, PublishResult } from "./types";
 
 type Target = Database["public"]["Tables"]["post_targets"]["Row"];
@@ -16,6 +18,8 @@ export type RunDeps = {
   loadMeta: (brandId: string) => Promise<{ config: MetaConfig; secret: MetaSecret } | null>;
   publishFb: (pageId: string, token: string, input: PublishInput) => Promise<PublishResult>;
   publishIg: (igUserId: string, token: string, input: PublishInput) => Promise<PublishResult>;
+  loadGbp?: (brandId: string) => Promise<{ secret: GbpSecret } | null>;
+  publishGbp?: (locationName: string, refreshToken: string, input: PublishInput) => Promise<PublishResult>;
   save: (targetId: string, patch: TargetPatch) => Promise<void>;
 };
 
@@ -28,14 +32,22 @@ export async function processTarget(target: Target, deps: RunDeps): Promise<"pub
   try {
     const post = await deps.loadPost(target.post_id);
     if (!post) return fail("Post not found");
-    const meta = await deps.loadMeta(post.brand_id);
-    if (!meta) return fail("Meta is not connected for this brand");
     const input: PublishInput = {
       caption: target.caption,
       link_url: post.link_url,
       media: ((post.media as MediaItem[] | null) ?? []).map((m) => ({ url: m.url })),
     };
     let result: PublishResult;
+    if (target.platform === "gbp") {
+      const gbp = deps.loadGbp ? await deps.loadGbp(post.brand_id) : null;
+      if (!gbp || !deps.publishGbp) return fail("Google Business Profile is not connected for this brand");
+      if (!target.location_ref) return fail("No Google location on this target");
+      result = await deps.publishGbp(target.location_ref, gbp.secret.refresh_token, input);
+      await deps.save(target.id, { status: "published", external_id: result.external_id, external_url: result.external_url, published_at: new Date().toISOString(), error: null, claimed_at: null });
+      return "published";
+    }
+    const meta = await deps.loadMeta(post.brand_id);
+    if (!meta) return fail("Meta is not connected for this brand");
     if (target.platform === "facebook") {
       result = await deps.publishFb(meta.config.page_id, meta.secret.page_access_token, input);
     } else {
@@ -63,6 +75,11 @@ export function realDeps(): RunDeps {
     loadMeta: async (brandId) => getConnectionWithSecret<MetaConfig, MetaSecret>(brandId, "meta"),
     publishFb: (p, t, i) => publishToFacebook(p, t, i),
     publishIg: (ig, t, i) => publishToInstagram(ig, t, i),
+    loadGbp: async (brandId) => {
+      const c = await getConnectionWithSecret<unknown, GbpSecret>(brandId, "gbp");
+      return c ? { secret: c.secret } : null;
+    },
+    publishGbp: (loc, rt, i) => publishToGbp(loc, rt, i),
     save: async (id, patch) => {
       await admin.from("post_targets").update(patch).eq("id", id);
     },

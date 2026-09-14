@@ -61,6 +61,20 @@ export default async function SettingsPage() {
           </p>
         </CardContent>
       </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Google Business Profile posting {env.GBP_ENABLED === "true" ? "(enabled)" : "(not enabled)"}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <p>Approved posts can also go out as Google posts to each client&apos;s Business Profile locations. Google gates this API behind an access request:</p>
+          <ol className="list-decimal space-y-1 pl-5">
+            <li>In the Google Cloud project, enable <i>My Business Account Management API</i>, <i>My Business Business Information API</i> and <i>Google My Business API</i>.</li>
+            <li>Request access: <a className="underline" href="https://developers.google.com/my-business/content/prereqs#request-access" target="_blank" rel="noreferrer">developers.google.com/my-business → Request access</a> (uses the project ID; approval usually takes days to a couple of weeks).</li>
+            <li>Create an OAuth client (Web application) with redirect URI <code>{env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback</code>; set <code>GOOGLE_OAUTH_CLIENT_ID</code>, <code>GOOGLE_OAUTH_CLIENT_SECRET</code> and <code>GBP_ENABLED=true</code> on Vercel.</li>
+            <li>Then each brand gets a &quot;Google Business Profile&quot; card under Connections with a Connect Google button and a location picker.</li>
+          </ol>
+        </CardContent>
+      </Card>
     </div>
   );
 }
