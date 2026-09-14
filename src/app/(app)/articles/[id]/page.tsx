@@ -10,6 +10,8 @@ import { ArticleActions } from "@/components/articles/article-actions";
 import { ArticleStatusBadge } from "@/components/articles/status-badge";
 import { formatInZone } from "@/lib/time/zoned";
 
+export const maxDuration = 300;
+
 export default async function ArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const article = await getArticle(id);
