@@ -5,7 +5,9 @@ export function buildSystemPrompt(b: Brief): string {
   const docs: [string, string][] =
     b.job.type === "article"
       ? [["blog_style", g.blog_style], ["blog_post_spec", g.blog_post_spec]]
-      : [["social_style", g.social_style], ["social_post_spec", g.social_post_spec]];
+      : b.job.type === "pin"
+        ? [["pin_spec", g.pin_spec]]
+        : [["social_style", g.social_style], ["social_post_spec", g.social_post_spec]];
   const brandBits = [b.brand.website_url ? `website ${b.brand.website_url}` : "", b.brand.seo_suffix ? `SEO suffix "${b.brand.seo_suffix}"` : ""].filter(Boolean).join(", ");
   return [
     `You are the content writer for the brand "${b.brand.name}" (slug ${b.brand.slug}, timezone ${b.brand.timezone}${brandBits ? `, ${brandBits}` : ""}).`,

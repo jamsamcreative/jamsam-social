@@ -10,6 +10,7 @@ import { GoogleGrantSteps } from "./google-grant-steps";
 import { Ga4LeadEvents } from "./ga4-lead-events";
 import { MetaAdAccounts } from "./meta-ad-accounts";
 import { GbpLocations } from "./gbp-locations";
+import { PinterestConnect } from "./pinterest-connect";
 import { saveAndTestConnection, type ActionResult } from "@/lib/connections/actions";
 import { PROVIDER_LABELS, type Provider } from "@/lib/connections/types";
 import type { ConnectionPublic } from "@/lib/connections/queries";
@@ -26,12 +27,16 @@ export function ConnectionCard({
   provider,
   connection,
   serviceAccountEmail = null,
+  pinterestOauth = false,
+  boards = [],
 }: {
   brandId: string;
   slug: string;
   provider: Provider;
   connection: ConnectionPublic | null;
   serviceAccountEmail?: string | null;
+  pinterestOauth?: boolean;
+  boards?: { board_id: string; name: string; pin_count: number | null; pins_in_app: number; measured: number; median_impressions: number | null }[];
 }) {
   const action = saveAndTestConnection.bind(null, brandId, provider);
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(action, null);
@@ -64,6 +69,7 @@ export function ConnectionCard({
           <MetaConnect brandId={brandId} slug={slug} connected={connection ? (cfg as { page_name?: string; ig_username?: string | null; connected_via?: string }) : null} />
         )}
         {provider === "meta" && <p className="text-xs text-muted-foreground">Or paste a long-lived Page token below.</p>}
+        {provider === "pinterest" && <PinterestConnect brandId={brandId} slug={slug} oauth={pinterestOauth} connected={connection?.status === "connected" ? (cfg as { username?: string }) : null} boards={boards} />}
         <form action={formAction} className="space-y-4">
           <ConnectionFields
             provider={provider}

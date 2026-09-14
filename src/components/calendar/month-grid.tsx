@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import type { Platform } from "@/lib/posts/status";
 import { moveKeepingTime } from "@/lib/calendar/grid";
 import { rescheduleTarget } from "@/lib/posts/actions";
+import { reschedulePin } from "@/lib/pins/actions";
 import { utcToZonedLocal } from "@/lib/time/zoned";
 import { cn } from "@/lib/utils";
 
@@ -13,10 +14,11 @@ export type Chip = {
   id: string;
   post_id: string;
   title: string;
-  platform: Platform;
+  platform: Platform | "pinterest";
   status: "pending" | "publishing" | "published" | "failed";
   scheduled_at: string;
   movable: boolean;
+  href?: string;
 };
 
 const STATUS_CLS: Record<Chip["status"], string> = {
@@ -37,7 +39,7 @@ export function MonthGrid({ days, chipsByDay, timezone, today }: { days: { date:
     setDragging(null);
     const newIso = moveKeepingTime(chip.scheduled_at, day, timezone);
     start(async () => {
-      const r = await rescheduleTarget(chip.id, newIso);
+      const r = chip.platform === "pinterest" ? await reschedulePin(chip.id, newIso) : await rescheduleTarget(chip.id, newIso);
       if (r.ok) {
         toast.success("Rescheduled");
         router.refresh();
@@ -64,14 +66,14 @@ export function MonthGrid({ days, chipsByDay, timezone, today }: { days: { date:
             {(chipsByDay[d.date] ?? []).map((c) => (
               <Link
                 key={c.id}
-                href={`/posts/${c.post_id}`}
+                href={c.href ?? `/posts/${c.post_id}`}
                 draggable={c.movable}
                 onDragStart={() => setDragging(c)}
                 onDragEnd={() => setDragging(null)}
                 title={`${c.title} · ${c.platform} · ${c.status}`}
                 className={cn("block truncate rounded border px-1 py-0.5", STATUS_CLS[c.status], c.movable && "cursor-grab")}
               >
-                <span className="font-mono">{c.platform === "facebook" ? "FB" : c.platform === "instagram" ? "IG" : "GBP"}</span> {utcToZonedLocal(c.scheduled_at, timezone).slice(11)} {c.title}
+                <span className="font-mono">{c.platform === "facebook" ? "FB" : c.platform === "instagram" ? "IG" : c.platform === "pinterest" ? "PIN" : "GBP"}</span> {utcToZonedLocal(c.scheduled_at, timezone).slice(11)} {c.title}
               </Link>
             ))}
           </div>

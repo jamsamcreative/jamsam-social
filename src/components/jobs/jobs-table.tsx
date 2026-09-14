@@ -9,7 +9,7 @@ import { retryJob, cancelJob, type ActionResult } from "@/lib/jobs/actions";
 import { formatInZone } from "@/lib/time/zoned";
 import type { GenerationJob } from "@/lib/jobs/queries";
 
-const TYPE_LABEL = { caption: "Captions", article: "Article", promo: "Promo post", rewrite: "Rewrite", seo_cluster: "Keyword clusters" } as const;
+const TYPE_LABEL = { caption: "Captions", article: "Article", promo: "Promo post", rewrite: "Rewrite", seo_cluster: "Keyword clusters", pin: "Pin" } as const;
 
 function duration(j: GenerationJob): string {
   if (!j.started_at) return "";

@@ -2,6 +2,7 @@
 import { useActionState, useEffect, useTransition } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,9 +59,12 @@ export function AssetDialog({ asset, onClose }: { asset: MediaAsset | null; onCl
             </p>
             <p className="break-all text-xs text-muted-foreground">{asset.public_url}</p>
             <div className="flex justify-between">
-              <Button type="button" variant="destructive" onClick={remove} disabled={deleting}>
-                {deleting ? "Deleting..." : "Delete"}
-              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="destructive" onClick={remove} disabled={deleting}>
+                  {deleting ? "Deleting..." : "Delete"}
+                </Button>
+                <Button type="button" variant="outline" nativeButton={false} render={<Link href={`/pins/new?asset=${asset.id}`} />}>Write a pin</Button>
+              </div>
               <Button type="submit" disabled={pending}>
                 {pending ? "Saving..." : "Save"}
               </Button>

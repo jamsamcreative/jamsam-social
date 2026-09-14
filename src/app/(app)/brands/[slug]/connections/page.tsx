@@ -4,6 +4,7 @@ import { listConnectionsForBrand } from "@/lib/connections/queries";
 import { PROVIDER_ORDER } from "@/lib/connections";
 import { serviceAccount } from "@/lib/google/auth";
 import { env } from "@/lib/env";
+import { createSupabaseStore } from "@/lib/ai/store";
 import { ConnectionCard } from "@/components/brands/connection-card";
 import { ConnectionsToast } from "@/components/brands/connections-toast";
 import { Suspense } from "react";
@@ -15,7 +16,7 @@ export default async function ConnectionsPage({ params }: { params: Promise<{ sl
   const { slug } = await params;
   const brand = await getBrandBySlug(slug);
   if (!brand) notFound();
-  const connections = await listConnectionsForBrand(brand.id);
+  const [connections, boards] = await Promise.all([listConnectionsForBrand(brand.id), createSupabaseStore().listPinBoards(brand.id)]);
 
   return (
     <div className="space-y-6">
@@ -26,7 +27,7 @@ export default async function ConnectionsPage({ params }: { params: Promise<{ sl
       </Suspense>
       <div className="grid gap-4 lg:grid-cols-2">
         {[...PROVIDER_ORDER, ...(env.GBP_ENABLED === "true" ? (["gbp"] as const) : [])].map((p) => (
-          <ConnectionCard key={p} brandId={brand.id} slug={brand.slug} provider={p} connection={connections.find((c) => c.provider === p) ?? null} serviceAccountEmail={serviceAccount()?.email ?? null} />
+          <ConnectionCard key={p} brandId={brand.id} slug={brand.slug} provider={p} connection={connections.find((c) => c.provider === p) ?? null} serviceAccountEmail={serviceAccount()?.email ?? null} pinterestOauth={Boolean(env.PINTEREST_APP_ID && env.PINTEREST_APP_SECRET)} boards={p === "pinterest" ? boards : []} />
         ))}
       </div>
     </div>

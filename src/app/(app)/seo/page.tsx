@@ -34,7 +34,7 @@ export default async function SeoPage({ searchParams }: { searchParams: Promise<
     body = <KeywordMap articles={articles} pages={pages} keywords={keywords} />;
   } else if (tab === "bank") {
     const { rows, categories, states } = await listProjectsForBrand(brand.id, { q: sp.q, category: sp.category, state: sp.state });
-    body = <ContentBank rows={rows} categories={categories} states={states} />;
+    body = <ContentBank brandId={brand.id} rows={rows} categories={categories} states={states} />;
   } else {
     body = <Imports brandId={brand.id} siteUrl={brand.website_url ?? ""} imports={imports} hasSemrush={has("semrush")} hasWordpress={has("wordpress")} hasGsc={has("search_console")} />;
   }
