@@ -1,16 +1,16 @@
 // In-memory Store used by tool, brief, runner and MCP tests. Never imported by app code.
 import { vi } from "vitest";
-import type { Store, StoreJob, PostSummary, ArticleFull, StoreMedia, SitePage, Keyword, Project, KeywordImport, ArticleKeywordRef } from "./store";
+import type { Store, StoreJob, PostSummary, ArticleFull, StoreMedia, SitePage, Keyword, Project, KeywordImport, ArticleKeywordRef, PinBoardInfo } from "./store";
 import type { CategoryLike } from "./content-mix";
 
 export const BRAND = { id: "b1", slug: "acme", name: "Acme", timezone: "America/Los_Angeles", website_url: "https://acme.com", seo_suffix: "| Acme" };
 
-type Seed = { jobs?: StoreJob[]; posts?: PostSummary[]; articles?: ArticleFull[]; media?: StoreMedia[]; categories?: CategoryLike[]; sitePages?: SitePage[]; keywords?: Keyword[]; projects?: Project[]; articleRefs?: ArticleKeywordRef[]; gscQueryPages?: { query: string; page: string; position: number; clicks: number }[]; imports?: KeywordImport[] };
-export type FakeStore = Store & { jobs: StoreJob[]; keywords: Keyword[]; imports: KeywordImport[]; created: { posts: unknown[]; articles: unknown[] } };
+type Seed = { jobs?: StoreJob[]; posts?: PostSummary[]; articles?: ArticleFull[]; media?: StoreMedia[]; categories?: CategoryLike[]; sitePages?: SitePage[]; keywords?: Keyword[]; projects?: Project[]; articleRefs?: ArticleKeywordRef[]; gscQueryPages?: { query: string; page: string; position: number; clicks: number }[]; imports?: KeywordImport[]; boards?: PinBoardInfo[] };
+export type FakeStore = Store & { jobs: StoreJob[]; keywords: Keyword[]; imports: KeywordImport[]; created: { posts: unknown[]; articles: unknown[]; pins: unknown[] } };
 
 export function fakeStore(over: Partial<Store> & Seed = {}): FakeStore {
-  const { jobs = [], posts = [], articles = [], media = [], categories = [], sitePages = [], keywords = [], projects = [], articleRefs = [], gscQueryPages = [], imports = [], ...overrides } = over;
-  const created = { posts: [] as unknown[], articles: [] as unknown[] };
+  const { jobs = [], posts = [], articles = [], media = [], categories = [], sitePages = [], keywords = [], projects = [], articleRefs = [], gscQueryPages = [], imports = [], boards = [], ...overrides } = over;
+  const created = { posts: [] as unknown[], articles: [] as unknown[], pins: [] as unknown[] };
   const base: Store = {
     listBrands: vi.fn(async () => [{ ...BRAND, connections: { wordpress: "connected" } }]),
     getBrandBySlug: vi.fn(async (slug) => (slug === BRAND.slug ? BRAND : null)),
@@ -62,6 +62,12 @@ export function fakeStore(over: Partial<Store> & Seed = {}): FakeStore {
     listGscQueryPages: vi.fn(async () => gscQueryPages),
     logImport: vi.fn(async (_b, kind, detail, rows) => { imports.push({ id: `i${imports.length + 1}`, brand_id: BRAND.id, kind, detail, rows, created_by: null, created_at: new Date().toISOString() }); }),
     listImports: vi.fn(async () => imports),
+    listPinBoards: vi.fn(async () => boards),
+    createPin: vi.fn(async (input) => { created.pins.push(input); return { pin_id: "77777777-7777-4777-8777-777777777777" }; }),
+    listRecentPinTitles: vi.fn(async () => (created.pins as { title: string }[]).map((p) => p.title)),
+    listUnpinned: vi.fn(async (_b, kind) => (kind === "media" ? media.map((m) => ({ id: m.id, title: m.alt ?? m.id, url: null, image_url: m.url })) : projects.map((p) => ({ id: p.id, title: p.title, url: p.url, image_url: ((p.images as { url: string }[]) ?? [])[0]?.url ?? null })))),
+    getProject: vi.fn(async (id) => projects.find((p) => p.id === id) ?? null),
+    getMediaAsset: vi.fn(async (id) => media.find((m) => m.id === id) ?? null),
   };
   return Object.assign(base, overrides, { jobs, keywords, imports, created });
 }

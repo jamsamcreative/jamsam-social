@@ -5,6 +5,7 @@ import { createWpClient } from "@/lib/wordpress/client";
 import type { WordpressConfig, WordpressSecret } from "@/lib/connections/wordpress-shared";
 import { GUIDELINE_KINDS, type GuidelineKind } from "@/lib/guidelines/kinds";
 import { MIX_WINDOW, type CategoryLike } from "./content-mix";
+import { boardStats } from "@/lib/pins/rules";
 import type { Database, Json, MediaItem, TermRef } from "@/lib/database.types";
 import type { JobStatus, JobRunner } from "./schemas";
 
@@ -33,6 +34,8 @@ export type Keyword = Database["public"]["Tables"]["keywords"]["Row"];
 export type Project = Database["public"]["Tables"]["projects"]["Row"];
 export type KeywordImport = Database["public"]["Tables"]["keyword_imports"]["Row"];
 export type KeywordUpsert = Partial<Omit<Keyword, "id" | "brand_id" | "imported_at">> & { keyword: string };
+export type PinBoardInfo = { board_id: string; name: string; pin_count: number | null; pins_in_app: number; measured: number; median_impressions: number | null };
+export type CreatePinInput = { brand_id: string; board_id: string; board_name: string | null; title: string; description: string; link: string | null; alt_text: string | null; image_url: string; media_asset_id: string | null; project_id: string | null; source: "ai"; created_by?: string | null };
 export type ArticleKeywordRef = { id: string; title: string; slug: string; status: ArticleStatus; primary_keyword: string | null; secondary_keywords: string[]; wp_link: string | null };
 export type WpMediaHit = { id: number; source_url: string; alt_text: string; title: string };
 
@@ -69,6 +72,13 @@ export type Store = {
   listGscQueryPages(brandId: string, days: number): Promise<{ query: string; page: string; position: number; clicks: number }[]>;
   logImport(brandId: string, kind: string, detail: string | null, rows: number, userId?: string | null): Promise<void>;
   listImports(brandId: string): Promise<KeywordImport[]>;
+  // Pinterest (Phase 6)
+  listPinBoards(brandId: string): Promise<PinBoardInfo[]>;
+  createPin(input: CreatePinInput): Promise<{ pin_id: string }>;
+  listRecentPinTitles(brandId: string, limit?: number): Promise<string[]>;
+  listUnpinned(brandId: string, kind: "media" | "projects", limit?: number): Promise<{ id: string; title: string; url: string | null; image_url: string | null }[]>;
+  getProject(id: string): Promise<Project | null>;
+  getMediaAsset(id: string): Promise<StoreMedia | null>;
 };
 
 export function articleUrl(a: { wp_link: string | null; slug: string }, brand: { website_url: string | null }): string {
@@ -328,6 +338,44 @@ export function createSupabaseStore(admin = createAdminSupabase()): Store {
       const { data, error } = await admin.from("keyword_imports").select("*").eq("brand_id", brandId).order("created_at", { ascending: false }).limit(50);
       if (error) fail(error);
       return data ?? [];
+    },
+    async listPinBoards(brandId) {
+      const [{ data: boards, error }, { data: pins }] = await Promise.all([
+        admin.from("pin_boards").select("*").eq("brand_id", brandId).order("name"),
+        admin.from("pins").select("board_id,status,insights").eq("brand_id", brandId).neq("status", "archived"),
+      ]);
+      if (error) fail(error);
+      const stats = boardStats((pins ?? []).map((p) => ({ board_id: p.board_id, status: p.status, insights: p.insights as { impressions?: number } | null })));
+      return (boards ?? []).map((b) => ({ board_id: b.board_id, name: b.name, pin_count: b.pin_count, pins_in_app: stats[b.board_id]?.pins ?? 0, measured: stats[b.board_id]?.measured ?? 0, median_impressions: stats[b.board_id]?.median_impressions ?? null }));
+    },
+    async createPin(input) {
+      const { created_by, ...rest } = input;
+      const { data, error } = await admin.from("pins").insert({ ...rest, status: "draft", created_by: created_by ?? null }).select("id").single();
+      if (error || !data) fail(error);
+      return { pin_id: data.id };
+    },
+    async listRecentPinTitles(brandId, limit = 30) {
+      const { data } = await admin.from("pins").select("title").eq("brand_id", brandId).neq("status", "archived").order("created_at", { ascending: false }).limit(limit);
+      return (data ?? []).map((p) => p.title);
+    },
+    async listUnpinned(brandId, kind, limit = 20) {
+      const { data: pinned } = await admin.from("pins").select("media_asset_id,project_id").eq("brand_id", brandId).neq("status", "archived");
+      const usedMedia = new Set((pinned ?? []).map((p) => p.media_asset_id).filter(Boolean));
+      const usedProjects = new Set((pinned ?? []).map((p) => p.project_id).filter(Boolean));
+      if (kind === "media") {
+        const { data } = await admin.from("media_assets").select("id,alt_text,public_url").eq("brand_id", brandId).order("created_at", { ascending: false }).limit(200);
+        return (data ?? []).filter((m) => !usedMedia.has(m.id)).slice(0, limit).map((m) => ({ id: m.id, title: m.alt_text ?? m.id, url: null, image_url: m.public_url }));
+      }
+      const { data } = await admin.from("projects").select("id,title,url,images").eq("brand_id", brandId).order("imported_at", { ascending: false }).limit(500);
+      return (data ?? []).filter((p) => !usedProjects.has(p.id)).slice(0, limit).map((p) => ({ id: p.id, title: p.title, url: p.url, image_url: ((p.images as { url: string }[] | null) ?? [])[0]?.url ?? null }));
+    },
+    async getProject(id) {
+      const { data } = await admin.from("projects").select("*").eq("id", id).maybeSingle();
+      return data ?? null;
+    },
+    async getMediaAsset(id) {
+      const { data } = await admin.from("media_assets").select("id,public_url,alt_text,tags").eq("id", id).maybeSingle();
+      return data ? { id: data.id, url: data.public_url, alt: data.alt_text, tags: data.tags, used_as_featured: false } : null;
     },
   };
 }
