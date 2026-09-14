@@ -7,6 +7,9 @@ import { validateForSubmit, PLATFORMS } from "./status";
 import { zonedLocalToUtc } from "@/lib/time/zoned";
 import type { Json } from "@/lib/database.types";
 import type { Post, PostTarget } from "./queries";
+import { env } from "@/lib/env";
+import { getConnectionWithSecret } from "@/lib/connections/queries";
+import type { GbpConfig } from "@/lib/connections/gbp";
 
 export type ActionResult = { ok: true; id?: string } | { ok: false; error: string };
 
@@ -105,8 +108,20 @@ export async function approvePost(id: string): Promise<ActionResult> {
   if (r.error !== undefined) return { ok: false, error: r.error };
   if (r.post.status !== "pending_approval") return { ok: false, error: "Post is not awaiting approval" };
   await r.supabase.from("posts").update({ status: "approved", approved_by: r.user.id, approved_at: new Date().toISOString() }).eq("id", id);
+  await addGbpTargets(r.post, r.supabase);
   refresh();
   return { ok: true };
+}
+
+/** Feature-flagged: approved posts also go out as Google Business Profile posts, one target per enabled location, mirroring the Facebook schedule. */
+async function addGbpTargets(post: Post & { targets: PostTarget[] }, supabase: Awaited<ReturnType<typeof createServerSupabase>>) {
+  if (env.GBP_ENABLED !== "true") return;
+  const gbp = await getConnectionWithSecret<GbpConfig, unknown>(post.brand_id, "gbp");
+  const fb = post.targets.find((t) => t.platform === "facebook");
+  if (!gbp || !fb) return;
+  const existing = new Set(post.targets.filter((t) => t.platform === "gbp").map((t) => t.location_ref));
+  const rows = (gbp.config.locations ?? []).filter((l) => l.enabled && !existing.has(l.name)).map((l) => ({ post_id: post.id, platform: "gbp" as const, caption: fb.caption, scheduled_at: fb.scheduled_at, location_ref: l.name }));
+  if (rows.length) await supabase.from("post_targets").insert(rows);
 }
 
 export async function rejectPost(id: string): Promise<ActionResult> {

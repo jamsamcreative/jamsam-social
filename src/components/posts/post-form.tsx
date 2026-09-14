@@ -73,7 +73,7 @@ export function PostForm({
   };
   const applyCaptions = useCallback(
     (r: CaptionResult) => {
-      setTargets((ts) => ts.map((t) => ({ ...t, caption: r.captions[t.platform] })));
+      setTargets((ts) => ts.map((t) => (t.platform === "facebook" || t.platform === "instagram" ? { ...t, caption: r.captions[t.platform] } : t)));
       if (r.category_slug) setCategoryId((cur) => categories.find((c) => c.slug === r.category_slug)?.id ?? cur);
     },
     [categories],

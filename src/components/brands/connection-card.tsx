@@ -9,6 +9,7 @@ import { MetaConnect } from "./meta-connect";
 import { GoogleGrantSteps } from "./google-grant-steps";
 import { Ga4LeadEvents } from "./ga4-lead-events";
 import { MetaAdAccounts } from "./meta-ad-accounts";
+import { GbpLocations } from "./gbp-locations";
 import { saveAndTestConnection, type ActionResult } from "@/lib/connections/actions";
 import { PROVIDER_LABELS, type Provider } from "@/lib/connections/types";
 import type { ConnectionPublic } from "@/lib/connections/queries";
@@ -78,6 +79,7 @@ export function ConnectionCard({
             </>
           )}
           {provider === "meta_ads" && <MetaAdAccounts tokenInputId="meta_ads-access_token" accountInputId="meta_ads-ad_account_id" />}
+          {provider === "gbp" && <GbpLocations slug={slug} initial={(cfg.locations as { name: string; title: string; enabled: boolean }[] | undefined) ?? []} connected={Boolean(connection?.has_secret)} />}
           {shown && (
             <p className={shown.ok ? "text-sm text-green-700" : "text-sm text-destructive"}>
               {shown.ok ? shown.detail : shown.error}

@@ -5,7 +5,7 @@ export type TargetStatus = Database["public"]["Enums"]["target_status"];
 export type Platform = Database["public"]["Enums"]["social_platform"];
 
 export const PLATFORMS: Platform[] = ["facebook", "instagram"];
-export const PLATFORM_LABELS: Record<Platform, string> = { facebook: "Facebook", instagram: "Instagram" };
+export const PLATFORM_LABELS: Record<Platform, string> = { facebook: "Facebook", instagram: "Instagram", gbp: "Google Business Profile" };
 export const MAX_MEDIA = 10;
 export const MAX_ATTEMPTS = 3;
 
