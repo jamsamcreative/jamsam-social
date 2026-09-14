@@ -75,7 +75,7 @@ export async function savePost(_prev: ActionResult | null, formData: FormData): 
     if (t.enabled) {
       const { error } = await supabase
         .from("post_targets")
-        .upsert({ post_id: id, platform: t.platform, caption: t.caption, scheduled_at, status: "pending", error: null }, { onConflict: "post_id,platform" });
+        .upsert({ post_id: id, platform: t.platform, location_ref: "", caption: t.caption, scheduled_at, status: "pending", error: null }, { onConflict: "post_id,platform,location_ref" });
       if (error) return { ok: false, error: error.message };
     } else {
       await supabase.from("post_targets").delete().eq("post_id", id).eq("platform", t.platform).neq("status", "published");

@@ -26,7 +26,7 @@ type PostRow = {
   created_by: string | null; approved_by: string | null; approved_at: string | null; created_at: string; updated_at: string;
 };
 type PostTargetRow = {
-  id: string; post_id: string; platform: "facebook" | "instagram" | "gbp"; caption: string; scheduled_at: string | null; location_ref: string | null;
+  id: string; post_id: string; platform: "facebook" | "instagram" | "gbp"; caption: string; scheduled_at: string | null; location_ref: string;
   status: "pending" | "publishing" | "published" | "failed"; external_id: string | null; external_url: string | null;
   published_at: string | null; error: string | null; attempts: number; claimed_at: string | null;
   insights: Json | null; insights_fetched_at: string | null; created_at: string; updated_at: string;
