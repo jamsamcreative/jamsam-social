@@ -109,6 +109,17 @@ export async function getPost(client: WpClient, id: number): Promise<WpPostResul
   return (await client.get<WpPostResult>(`/wp/v2/posts/${id}`, { _fields: POST_FIELDS, context: "edit" })).data;
 }
 
+/** True when the media item still exists in WordPress (the map cache can go stale if someone deletes it there). */
+export async function mediaExists(client: WpClient, id: number): Promise<boolean> {
+  try {
+    await client.get(`/wp/v2/media/${id}`, { _fields: "id", _: String(Date.now()) });
+    return true;
+  } catch (e) {
+    if (e instanceof WpError && e.status === 404) return false;
+    throw e;
+  }
+}
+
 export async function checkHelper(client: WpClient): Promise<{ installed: boolean; version?: string }> {
   try {
     // Cache-bust: page caches (e.g. WP Engine) hold the pre-install 404 for minutes.

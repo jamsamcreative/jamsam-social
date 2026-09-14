@@ -1,5 +1,5 @@
 "use client";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -7,21 +7,35 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MediaPicker } from "./media-picker";
+import { GenerateCaptions } from "./generate-captions";
 import { savePost, type ActionResult } from "@/lib/posts/actions";
 import { PLATFORMS, PLATFORM_LABELS, type Platform } from "@/lib/posts/status";
 import { utcToZonedLocal } from "@/lib/time/zoned";
 import type { MediaItem } from "@/lib/database.types";
 import type { MediaAsset } from "@/lib/media/queries";
 import type { PostWithTargets } from "@/lib/posts/queries";
+import type { PostCategory } from "@/lib/categories/queries";
+import type { CaptionResult } from "@/lib/ai/schemas";
 
 type TargetState = { platform: Platform; enabled: boolean; caption: string; scheduled_local: string | null };
 
-export function PostForm({ brand, post, assets }: { brand: { id: string; name: string; timezone: string }; post?: PostWithTargets; assets: MediaAsset[] }) {
+export function PostForm({
+  brand,
+  post,
+  assets,
+  categories = [],
+}: {
+  brand: { id: string; name: string; timezone: string };
+  post?: PostWithTargets;
+  assets: MediaAsset[];
+  categories?: PostCategory[];
+}) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(savePost, null);
   const [title, setTitle] = useState(post?.title ?? "");
   const [link, setLink] = useState(post?.link_url ?? "");
   const [media, setMedia] = useState<MediaItem[]>((post?.media as MediaItem[] | null) ?? []);
+  const [categoryId, setCategoryId] = useState<string | null>(post?.category_id ?? null);
   const [targets, setTargets] = useState<TargetState[]>(
     PLATFORMS.map((p) => {
       const t = post?.targets.find((x) => x.platform === p);
@@ -44,7 +58,26 @@ export function PostForm({ brand, post, assets }: { brand: { id: string; name: s
   }, [state, post, router]);
 
   const setT = (p: Platform, patch: Partial<TargetState>) => setTargets((ts) => ts.map((t) => (t.platform === p ? { ...t, ...patch } : t)));
-  const payload = JSON.stringify({ id: post?.id, brand_id: brand.id, title, link_url: link, media, targets });
+  const payload = JSON.stringify({ id: post?.id, brand_id: brand.id, title, link_url: link, media, targets, category_id: categoryId });
+
+  // Saves the current form state without navigating, so a caption job can reference the post id.
+  const ensureSaved = async (): Promise<string | null> => {
+    const fd = new FormData();
+    fd.set("payload", payload);
+    const r = await savePost(null, fd);
+    if (!r.ok) {
+      toast.error(r.error);
+      return null;
+    }
+    return r.id ?? post?.id ?? null;
+  };
+  const applyCaptions = useCallback(
+    (r: CaptionResult) => {
+      setTargets((ts) => ts.map((t) => ({ ...t, caption: r.captions[t.platform] })));
+      if (r.category_slug) setCategoryId((cur) => categories.find((c) => c.slug === r.category_slug)?.id ?? cur);
+    },
+    [categories],
+  );
 
   return (
     <form action={formAction} className="space-y-6">
@@ -58,10 +91,30 @@ export function PostForm({ brand, post, assets }: { brand: { id: string; name: s
           <Label htmlFor="link">Link URL (optional)</Label>
           <Input id="link" type="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://" />
         </div>
+        {categories.length > 0 && (
+          <div className="space-y-1">
+            <Label htmlFor="category">Category</Label>
+            <select id="category" value={categoryId ?? ""} onChange={(e) => setCategoryId(e.target.value || null)} className="w-full rounded-md border bg-background px-2 py-1.5 text-sm">
+              <option value="">Uncategorized</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
       <div className="space-y-1">
         <Label>Images</Label>
         <MediaPicker assets={assets} value={media} onChange={setMedia} />
+      </div>
+      <div className="flex items-center gap-3">
+        {post ? (
+          <GenerateCaptions brandId={brand.id} ensureSaved={ensureSaved} onResult={applyCaptions} />
+        ) : (
+          <p className="text-xs text-muted-foreground">Create the draft first to write captions with AI.</p>
+        )}
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         {targets.map((t) => (

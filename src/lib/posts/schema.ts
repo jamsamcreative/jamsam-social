@@ -26,6 +26,7 @@ export const postFormSchema = z.object({
   ),
   media: z.array(mediaItem).max(10, "At most 10 images"),
   targets: z.array(target).length(2),
+  category_id: z.string().uuid().nullable().default(null),
 });
 export type PostFormInput = z.infer<typeof postFormSchema>;
 

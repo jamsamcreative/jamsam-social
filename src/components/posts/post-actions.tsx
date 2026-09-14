@@ -3,7 +3,8 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { submitForApproval, approvePost, rejectPost, publishNow, recyclePost, archivePost, retryTarget, type ActionResult } from "@/lib/posts/actions";
+import { submitForApproval, approvePost, rejectPost, publishNow, archivePost, retryTarget, type ActionResult } from "@/lib/posts/actions";
+import { enqueueJob } from "@/lib/jobs/actions";
 import type { PostWithTargets } from "@/lib/posts/queries";
 
 export function PostActions({ post }: { post: PostWithTargets }) {
@@ -50,12 +51,15 @@ export function PostActions({ post }: { post: PostWithTargets }) {
           disabled={pending}
           onClick={() =>
             start(async () => {
-              const r = await recyclePost(post.id);
-              if (r && !r.ok) toast.error(r.error);
+              const r = await enqueueJob({ brandId: post.brand_id, type: "rewrite", input: { post_id: post.id } });
+              if (r.ok) {
+                toast.success("Rewrite queued — see Jobs");
+                router.push("/jobs");
+              } else toast.error(r.error);
             })
           }
         >
-          Recycle
+          Recycle with AI
         </Button>
       )}
       {failed.map((t) => (

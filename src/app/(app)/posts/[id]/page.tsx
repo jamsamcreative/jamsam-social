@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPost } from "@/lib/posts/queries";
 import { listMediaAssets } from "@/lib/media/queries";
+import { listCategories } from "@/lib/categories/queries";
 import { getBrandBySlug } from "@/lib/brands/queries";
 import { PostForm } from "@/components/posts/post-form";
 import { PostActions } from "@/components/posts/post-actions";
@@ -10,6 +11,8 @@ import { PostStatusBadge, TargetStatusBadge } from "@/components/posts/status-ba
 import { PLATFORM_LABELS } from "@/lib/posts/status";
 import { formatInZone } from "@/lib/time/zoned";
 import type { MediaItem } from "@/lib/database.types";
+
+export const maxDuration = 300;
 
 export default async function PostPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -99,7 +102,7 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
       </section>
 
       {editable ? (
-        <PostForm brand={brand} post={post} assets={await listMediaAssets(brand.id)} />
+        <PostForm brand={brand} post={post} assets={await listMediaAssets(brand.id)} categories={await listCategories(brand.id)} />
       ) : (
         <section className="space-y-4">
           {media.length > 0 && (

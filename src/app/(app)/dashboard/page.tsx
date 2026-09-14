@@ -56,6 +56,13 @@ export default async function DashboardPage() {
                     Connections
                   </Link>
                 </p>
+                {(b.jobs.running > 0 || b.jobs.failed > 0) && (
+                  <p className="text-xs">
+                    <Link href="/jobs" className={b.jobs.failed > 0 ? "font-medium text-destructive underline" : "underline"}>
+                      {b.jobs.running} job{b.jobs.running === 1 ? "" : "s"} running · {b.jobs.failed} failed
+                    </Link>
+                  </p>
+                )}
               </CardContent>
             </Card>
           ))}

@@ -4,9 +4,11 @@ import { getCurrentBrandSlug } from "@/lib/current-brand";
 import { listArticles, type Article } from "@/lib/articles/queries";
 import { ArticleStatusBadge } from "@/components/articles/status-badge";
 import { Button } from "@/components/ui/button";
+import { NewFromBrief } from "@/components/articles/new-from-brief";
 import { formatInZone } from "@/lib/time/zoned";
 
 export const metadata = { title: "Articles" };
+export const maxDuration = 300;
 
 const FILTERS: { key: string; label: string; statuses?: Article["status"][] }[] = [
   { key: "all", label: "All" },
@@ -39,9 +41,12 @@ export default async function ArticlesPage({ searchParams }: { searchParams: Pro
           <h1 className="text-2xl font-semibold">Articles</h1>
           <p className="text-sm text-muted-foreground">{brand.name}. Switch brands in the header.</p>
         </div>
-        <Button nativeButton={false} render={<Link href="/articles/new" />}>
-          New article
-        </Button>
+        <div className="flex gap-2">
+          <NewFromBrief brandId={brand.id} />
+          <Button nativeButton={false} render={<Link href="/articles/new" />}>
+            New article
+          </Button>
+        </div>
       </div>
       <div className="flex flex-wrap gap-2 text-sm">
         {FILTERS.map((f) => (

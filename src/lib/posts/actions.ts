@@ -54,13 +54,13 @@ export async function savePost(_prev: ActionResult | null, formData: FormData): 
     // Editing anything approved or pending drops it back to draft for re-review.
     const { error } = await supabase
       .from("posts")
-      .update({ title: input.title, link_url: input.link_url, media: input.media as Json, status: "draft" })
+      .update({ title: input.title, link_url: input.link_url, media: input.media as Json, category_id: input.category_id, status: "draft" })
       .eq("id", id);
     if (error) return { ok: false, error: error.message };
   } else {
     const { data, error } = await supabase
       .from("posts")
-      .insert({ brand_id: input.brand_id, title: input.title, link_url: input.link_url, media: input.media as Json, created_by: user.id })
+      .insert({ brand_id: input.brand_id, title: input.title, link_url: input.link_url, media: input.media as Json, category_id: input.category_id, created_by: user.id })
       .select("id")
       .single();
     if (error || !data) return { ok: false, error: error?.message ?? "Could not create post" };

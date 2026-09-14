@@ -21,7 +21,7 @@ type MediaRow = {
 export type MediaItem = { url: string; alt?: string | null; media_asset_id?: string | null };
 type PostRow = {
   id: string; brand_id: string; title: string; link_url: string | null; media: Json;
-  source: "manual" | "recycled" | "ai"; recycled_from: string | null;
+  source: "manual" | "recycled" | "ai"; recycled_from: string | null; category_id: string | null;
   status: "draft" | "pending_approval" | "approved" | "publishing" | "published" | "failed" | "archived";
   created_by: string | null; approved_by: string | null; approved_at: string | null; created_at: string; updated_at: string;
 };
@@ -42,6 +42,18 @@ type ArticleRow = {
   last_error: string | null; created_by: string | null; created_at: string; updated_at: string;
 };
 type ArticleMediaMapRow = { id: string; brand_id: string; source_url: string; wp_media_id: number; wp_url: string; created_at: string };
+type GenerationJobRow = {
+  id: string; brand_id: string; type: "caption" | "article" | "promo" | "rewrite";
+  status: "queued" | "claimed" | "running" | "completed" | "failed"; runner: "in_app" | "mcp";
+  input: Json; result: Json | null; error: string | null; post_id: string | null; article_id: string | null;
+  claimed_by: string | null; claimed_at: string | null; started_at: string | null; finished_at: string | null;
+  attempts: number; model: string | null; input_tokens: number | null; output_tokens: number | null;
+  created_by: string | null; created_at: string; updated_at: string;
+};
+type PostCategoryRow = {
+  id: string; brand_id: string; name: string; slug: string; target_share: number; description: string | null;
+  sort_order: number; created_at: string;
+};
 type Table<R, Req extends keyof R> = {
   Row: R;
   Insert: Pick<R, Req> & Partial<Omit<R, Req>>;
@@ -61,6 +73,8 @@ export type Database = {
       app_settings: Table<AppSettingRow, "key" | "value">;
       articles: Table<ArticleRow, "brand_id" | "title" | "slug">;
       article_media_map: Table<ArticleMediaMapRow, "brand_id" | "source_url" | "wp_media_id" | "wp_url">;
+      generation_jobs: Table<GenerationJobRow, "brand_id" | "type" | "input">;
+      post_categories: Table<PostCategoryRow, "brand_id" | "name" | "slug" | "target_share">;
     };
     Views: Record<string, never>;
     Functions: {
@@ -78,6 +92,9 @@ export type Database = {
       article_status: ArticleRow["status"];
       article_decision: ArticleRow["decision"];
       article_source: ArticleRow["source"];
+      job_type: GenerationJobRow["type"];
+      job_status: GenerationJobRow["status"];
+      job_runner: GenerationJobRow["runner"];
     };
     CompositeTypes: Record<string, never>;
   };

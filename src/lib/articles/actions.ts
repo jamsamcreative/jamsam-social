@@ -4,7 +4,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { getConnectionWithSecret } from "@/lib/connections/queries";
 import type { WordpressConfig, WordpressSecret } from "@/lib/connections/wordpress-shared";
-import { createWpClient, checkHelper, uploadMediaFromUrl, createPost, updatePost, getPost } from "@/lib/wordpress/client";
+import { createWpClient, checkHelper, mediaExists, uploadMediaFromUrl, createPost, updatePost, getPost } from "@/lib/wordpress/client";
 import { getWpTerms } from "@/lib/wordpress/terms";
 import { zonedLocalToUtc } from "@/lib/time/zoned";
 import type { Json, MediaItem } from "@/lib/database.types";
@@ -112,7 +112,14 @@ export async function pushArticle(id: string): Promise<ActionResult> {
       html: a.content_html,
       featured: like.featured_media,
       siteHost: new URL(client.siteUrl).hostname,
-      lookup: async (url) => (await admin.from("article_media_map").select("wp_media_id,wp_url").eq("brand_id", a.brand_id).eq("source_url", url).maybeSingle()).data,
+      lookup: async (url) => {
+        const { data } = await admin.from("article_media_map").select("wp_media_id,wp_url").eq("brand_id", a.brand_id).eq("source_url", url).maybeSingle();
+        if (!data) return null;
+        if (await mediaExists(client, data.wp_media_id)) return data;
+        // Someone deleted it in WordPress; forget the mapping so it re-uploads.
+        await admin.from("article_media_map").delete().eq("brand_id", a.brand_id).eq("source_url", url);
+        return null;
+      },
       upload: async (url, alt) => {
         const up = await uploadMediaFromUrl(client, url, { alt });
         await admin.from("article_media_map").upsert({ brand_id: a.brand_id, source_url: url, wp_media_id: up.id, wp_url: up.source_url }, { onConflict: "brand_id,source_url" });

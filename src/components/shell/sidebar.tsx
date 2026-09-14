@@ -9,7 +9,9 @@ const NAV = [
   { href: "/posts", label: "Posts" },
   { href: "/calendar", label: "Calendar" },
   { href: "/articles", label: "Articles" },
+  { href: "/jobs", label: "Jobs" },
   { href: "/media", label: "Media" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export function Sidebar() {
