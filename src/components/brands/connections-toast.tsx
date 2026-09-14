@@ -12,7 +12,11 @@ export function ConnectionsToast() {
     const err = params.get("meta_error");
     const gbpOk = params.get("gbp_connected");
     const gbpErr = params.get("gbp_error");
-    if (!ok && !err && !gbpOk && !gbpErr) return;
+    const pinOk = params.get("pinterest_connected");
+    const pinErr = params.get("pinterest_error");
+    if (!ok && !err && !gbpOk && !gbpErr && !pinOk && !pinErr) return;
+    if (pinOk) toast.success(`Pinterest connected: ${pinOk}`);
+    if (pinErr) toast.error(pinErr);
     if (ok) toast.success(`Connected ${ok}`);
     if (err) toast.error(err);
     if (gbpOk) toast.success(`Google connected: ${gbpOk} location${gbpOk === "1" ? "" : "s"} found. Tick the ones to post to and save.`);

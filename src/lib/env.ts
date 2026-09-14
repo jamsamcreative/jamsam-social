@@ -19,6 +19,8 @@ const schema = z.object({
   GBP_ENABLED: z.enum(["true", "false"]).default("false"),
   GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().optional(),
+  PINTEREST_APP_ID: z.string().optional(),
+  PINTEREST_APP_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof schema>;
@@ -48,4 +50,6 @@ export const env: Env = parseEnv({
   GBP_ENABLED: process.env.GBP_ENABLED,
   GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID,
   GOOGLE_OAUTH_CLIENT_SECRET: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+  PINTEREST_APP_ID: process.env.PINTEREST_APP_ID,
+  PINTEREST_APP_SECRET: process.env.PINTEREST_APP_SECRET,
 });

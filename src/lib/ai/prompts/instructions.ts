@@ -32,6 +32,13 @@ export const INSTRUCTIONS: Record<JobType, string> = {
     "Every keyword gets exactly one cluster. Keep local-intent variants with their topic (e.g. 'metal roofing spokane' → Metal Roofing).",
     "Finish by calling assign_clusters exactly once with every keyword.",
   ].join("\n"),
+  pin: [
+    "Write one Pinterest pin for the photo/project in the brief (`asset` or `project`). Pinterest is a search engine, not a feed: follow pin_spec exactly.",
+    "Title ≤ 100 chars, lead with dimensions when they exist (e.g. '40x60 Post Frame Shop in Spokane, WA'). Description 100–300 chars of plain, searchable text. No emoji, no hashtags.",
+    "Link to our own site: the project's url when it has one, otherwise the brand website. Never invent a dimension, colour or location; if the brief lacks it, leave it out.",
+    "Pick the board from `boards` that a browser of that board would expect this pin on (job.input.board_id wins when set). Do not repeat a title from `recent_pin_titles`.",
+    "Finish by calling create_pin exactly once.",
+  ].join("\n"),
   rewrite: [
     "Write a fresh variant of the captions on `post`: same facts, same media and link, new angle and opening. Do not reuse the first sentence.",
     "Follow social_style and social_post_spec. Keep the same category if the post has one.",

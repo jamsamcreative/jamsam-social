@@ -43,7 +43,7 @@ type ArticleRow = {
 };
 type ArticleMediaMapRow = { id: string; brand_id: string; source_url: string; wp_media_id: number; wp_url: string; created_at: string };
 type GenerationJobRow = {
-  id: string; brand_id: string; type: "caption" | "article" | "promo" | "rewrite" | "seo_cluster";
+  id: string; brand_id: string; type: "caption" | "article" | "promo" | "rewrite" | "seo_cluster" | "pin";
   status: "queued" | "claimed" | "running" | "completed" | "failed"; runner: "in_app" | "mcp";
   input: Json; result: Json | null; error: string | null; post_id: string | null; article_id: string | null;
   claimed_by: string | null; claimed_at: string | null; started_at: string | null; finished_at: string | null;
@@ -78,6 +78,15 @@ type ProjectRow = {
   dims: string | null; description: string | null; images: Json; tags: string[]; imported_at: string;
 };
 type KeywordImportRow = { id: string; brand_id: string; kind: string; detail: string | null; rows: number; created_by: string | null; created_at: string };
+type PinBoardRow = { brand_id: string; board_id: string; name: string; privacy: string | null; pin_count: number | null; synced_at: string };
+type PinRow = {
+  id: string; brand_id: string; board_id: string; board_name: string | null; title: string; description: string; link: string | null; alt_text: string | null;
+  image_url: string; media_asset_id: string | null; project_id: string | null; source: "manual" | "recycled" | "ai";
+  status: "draft" | "pending_approval" | "approved" | "publishing" | "published" | "failed" | "archived";
+  scheduled_at: string | null; published_at: string | null; external_id: string | null; external_url: string | null; error: string | null; attempts: number;
+  claimed_at: string | null; insights: Json | null; insights_fetched_at: string | null; created_by: string | null; approved_by: string | null; approved_at: string | null;
+  created_at: string; updated_at: string;
+};
 type PostCategoryRow = {
   id: string; brand_id: string; name: string; slug: string; target_share: number; description: string | null;
   sort_order: number; created_at: string;
@@ -105,6 +114,8 @@ export type Database = {
       post_categories: Table<PostCategoryRow, "brand_id" | "name" | "slug" | "target_share">;
       metrics_daily: Table<MetricsDailyRow, "brand_id" | "source" | "date" | "dim" | "metrics">;
       sync_runs: Table<SyncRunRow, "brand_id" | "source">;
+      pin_boards: Table<PinBoardRow, "brand_id" | "board_id" | "name">;
+      pins: Table<PinRow, "brand_id" | "board_id" | "title" | "description" | "image_url">;
       site_pages: Table<SitePageRow, "brand_id" | "wp_id" | "type" | "slug" | "url" | "title">;
       keywords: Table<KeywordRow, "brand_id" | "keyword">;
       projects: Table<ProjectRow, "brand_id" | "title">;
@@ -117,6 +128,8 @@ export type Database = {
     Functions: {
       claim_due_targets: { Args: { max_rows?: number }; Returns: PostTargetRow[] };
       reset_stale_targets: { Args: Record<string, never>; Returns: number };
+      claim_due_pins: { Args: { max_rows?: number }; Returns: PinRow[] };
+      reset_stale_pins: { Args: Record<string, never>; Returns: number };
     };
     Enums: {
       connection_provider: ConnectionRow["provider"];
@@ -134,6 +147,7 @@ export type Database = {
       job_runner: GenerationJobRow["runner"];
       metric_source: MetricsDailyRow["source"];
       keyword_source: KeywordRow["source"];
+      pin_status: PinRow["status"];
     };
     CompositeTypes: Record<string, never>;
   };
