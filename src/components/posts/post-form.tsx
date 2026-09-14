@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MediaPicker } from "./media-picker";
 import { GenerateCaptions } from "./generate-captions";
 import { savePost, type ActionResult } from "@/lib/posts/actions";
@@ -94,19 +93,15 @@ export function PostForm({
         </div>
         {categories.length > 0 && (
           <div className="space-y-1">
-            <Label>Category</Label>
-            <Select value={categoryId ?? ""} onValueChange={(v) => setCategoryId(v || null)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Uncategorized" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="category">Category</Label>
+            <select id="category" value={categoryId ?? ""} onChange={(e) => setCategoryId(e.target.value || null)} className="w-full rounded-md border bg-background px-2 py-1.5 text-sm">
+              <option value="">Uncategorized</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
           </div>
         )}
       </div>

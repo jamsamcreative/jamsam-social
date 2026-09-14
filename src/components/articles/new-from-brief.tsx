@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { enqueueJob } from "@/lib/jobs/actions";
 
 type Decision = "new" | "rewrite" | "optimize";
@@ -71,29 +70,19 @@ export function NewFromBrief({ brandId }: { brandId: string }) {
             </div>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1">
-                <Label>Decision</Label>
-                <Select value={decision} onValueChange={(v) => setDecision(v as Decision)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="new">New article</SelectItem>
-                    <SelectItem value="rewrite">Rewrite</SelectItem>
-                    <SelectItem value="optimize">Optimize</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="brief-decision">Decision</Label>
+                <select id="brief-decision" value={decision} onChange={(e) => setDecision(e.target.value as Decision)} className="w-full rounded-md border bg-background px-2 py-1.5 text-sm">
+                  <option value="new">New article</option>
+                  <option value="rewrite">Rewrite</option>
+                  <option value="optimize">Optimize</option>
+                </select>
               </div>
               <div className="space-y-1">
-                <Label>Runner</Label>
-                <Select value={runner} onValueChange={(v) => setRunner(v as Runner)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="in_app">In-app (Claude API)</SelectItem>
-                    <SelectItem value="mcp">Queue for MCP</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="brief-runner">Runner</Label>
+                <select id="brief-runner" value={runner} onChange={(e) => setRunner(e.target.value as Runner)} className="w-full rounded-md border bg-background px-2 py-1.5 text-sm">
+                  <option value="in_app">In-app (Claude API)</option>
+                  <option value="mcp">Queue for MCP</option>
+                </select>
               </div>
             </div>
             <div className="space-y-1">
