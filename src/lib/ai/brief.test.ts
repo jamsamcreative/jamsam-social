@@ -12,6 +12,7 @@ describe("buildBrief", () => {
     expect(b.guidelines.social_style).toBe("Be upbeat.");
     expect(b.recent_captions).toEqual([{ platform: "facebook", caption: "Old one" }]);
     expect(b.instructions).toMatch(/submit_captions/);
+    expect(b.hard_rules).toMatch(/em dashes/);
   });
   it("article brief includes media and existing articles", async () => {
     const store = fakeStore({ media: [{ id: "m", url: "https://cdn/a.jpg", alt: "a", tags: [], used_as_featured: false }] });

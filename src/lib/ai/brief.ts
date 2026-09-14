@@ -1,7 +1,7 @@
 import type { Store, StoreJob, StoreBrand, PostSummary, ArticleFull, ArticleSummary, StoreMedia } from "./store";
 import { computeContentMix, type ContentMix } from "./content-mix";
 import { parseJobInput, type JobType } from "./schemas";
-import { INSTRUCTIONS } from "./prompts/instructions";
+import { INSTRUCTIONS, HARD_RULES } from "./prompts/instructions";
 import type { GuidelineKind } from "@/lib/guidelines/kinds";
 
 export type Brief = {
@@ -14,6 +14,7 @@ export type Brief = {
   media?: StoreMedia[];
   existing_articles?: ArticleSummary[];
   recent_captions?: { platform: string; caption: string }[];
+  hard_rules: string;
   instructions: string;
 };
 
@@ -25,7 +26,7 @@ export async function buildBrief(store: Store, j: StoreJob): Promise<Brief> {
   const brand = await store.getBrandById(j.brand_id);
   if (!brand) throw new Error(`Brand ${j.brand_id} not found`);
   const [guidelines, cats, recentPosts] = await Promise.all([store.getGuidelines(brand.id), store.listCategories(brand.id), store.listRecentCategorizedPosts(brand.id)]);
-  const brief: Brief = { job: { id: j.id, type: j.type, input: parsed.data }, brand, guidelines, content_mix: computeContentMix(cats, recentPosts), instructions: INSTRUCTIONS[j.type] };
+  const brief: Brief = { job: { id: j.id, type: j.type, input: parsed.data }, brand, guidelines, content_mix: computeContentMix(cats, recentPosts), hard_rules: HARD_RULES, instructions: INSTRUCTIONS[j.type] };
 
   const recentCaptions = async () =>
     (await store.listPosts(brand.id, ["approved", "published"], 5)).flatMap((p) => p.targets.map((t) => ({ platform: t.platform, caption: t.caption })));

@@ -1,5 +1,9 @@
 import type { JobType } from "../schemas";
 
+/** Rules enforced in code by create_post / submit_captions (captions) and warned on by create_article (body). Shown to every writer up front. */
+export const HARD_RULES =
+  'No em dashes (—) or en dashes (–) anywhere. Never use the word "actually". Use contractions (we\'re, it\'s, you\'ll). Instagram captions ≤ 2,200 characters, Facebook ≤ 5,000. Never invent specs, prices or facts.';
+
 /** Type-specific marching orders. Shared by the in-app runner (system prompt) and claim_job (brief.instructions). */
 export const INSTRUCTIONS: Record<JobType, string> = {
   caption: [
