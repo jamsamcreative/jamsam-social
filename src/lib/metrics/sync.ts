@@ -63,6 +63,18 @@ async function syncGsc(brandId: string, c: NonNullable<BrandMetricConnections["g
       for (const row of r.rows) (perDay.get(row.keys[0]) ?? perDay.set(row.keys[0], []).get(row.keys[0])!).push(row);
       for (const rows of perDay.values()) out.push(...mapGsc(rows.sort((a, b) => b.clicks - a.clicks).slice(0, 100), source));
     }
+    // Which page ranks for which query (top 3 pages per query per day) — feeds keyword enrichment and cannibalization.
+    const qp = await client.query(c.site_url, { ...base, dimensions: ["date", "query", "page"], rowLimit: 25000 });
+    const perDayQuery = new Map<string, GscRow[]>();
+    for (const row of qp.rows) {
+      const k = `${row.keys[0]}\u0000${row.keys[1]}`;
+      (perDayQuery.get(k) ?? perDayQuery.set(k, []).get(k)!).push(row);
+    }
+    for (const rows of perDayQuery.values()) {
+      for (const r of rows.sort((a, b) => b.clicks - a.clicks || b.impressions - a.impressions).slice(0, 3)) {
+        out.push({ source: "gsc_query_page", date: r.keys[0], dim: `${r.keys[1]}|${r.keys[2]}`, metrics: { clicks: r.clicks, impressions: r.impressions, ctr: r.ctr, position: r.position } });
+      }
+    }
   }
   return out;
 }

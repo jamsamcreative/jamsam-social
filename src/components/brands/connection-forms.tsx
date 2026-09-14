@@ -36,6 +36,7 @@ export const FIELDS: Record<Provider, Field[]> = {
   ],
   semrush: [
     { name: "database", label: "Database", placeholder: "us" },
+    { name: "competitors", label: "Competitor domains (comma separated, up to 5)", placeholder: "dcbuilding.com, mqsbarn.com", help: "Used for the keyword gap refresh on the SEO page." },
     { name: "api_key", label: "API key", secret: true, help: "Leave blank to keep the saved one." },
   ],
   google_analytics: [{ name: "property_id", label: "GA4 property ID", placeholder: "450532525", help: "Numeric ID from GA4 → Admin → Property settings. Google Ads spend appears automatically when the Ads account is linked to this property." }],
@@ -59,7 +60,7 @@ export function ConnectionFields({ provider, config, extras }: { provider: Provi
             name={f.name}
             type={f.secret ? "password" : (f.type ?? "text")}
             placeholder={f.placeholder}
-            defaultValue={f.secret ? "" : String(config[f.name] ?? "")}
+            defaultValue={f.secret ? "" : Array.isArray(config[f.name]) ? (config[f.name] as string[]).join(", ") : String(config[f.name] ?? "")}
             autoComplete="off"
           />
           {f.help && <p className="text-xs text-muted-foreground">{f.help}</p>}

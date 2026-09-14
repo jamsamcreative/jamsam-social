@@ -28,6 +28,12 @@ export type CreateArticleInput = {
   decision: "new" | "rewrite" | "optimize"; rationale: string | null; source: "ai"; created_by?: string | null;
 };
 export type StoreMedia = { id: string; url: string; alt: string | null; tags: string[]; used_as_featured: boolean };
+export type SitePage = Database["public"]["Tables"]["site_pages"]["Row"];
+export type Keyword = Database["public"]["Tables"]["keywords"]["Row"];
+export type Project = Database["public"]["Tables"]["projects"]["Row"];
+export type KeywordImport = Database["public"]["Tables"]["keyword_imports"]["Row"];
+export type KeywordUpsert = Partial<Omit<Keyword, "id" | "brand_id" | "imported_at">> & { keyword: string };
+export type ArticleKeywordRef = { id: string; title: string; slug: string; status: ArticleStatus; primary_keyword: string | null; secondary_keywords: string[]; wp_link: string | null };
 export type WpMediaHit = { id: number; source_url: string; alt_text: string; title: string };
 
 /** Every DB/WP operation the AI layer needs, so tools and the runner can be tested against an in-memory fake. */
@@ -53,6 +59,16 @@ export type Store = {
   transitionJob(id: string, from: JobStatus[], patch: Partial<StoreJob>): Promise<StoreJob | null>;
   updateJob(id: string, patch: Partial<StoreJob>): Promise<void>;
   getSetting(key: string): Promise<string | null>;
+  // SEO (Phase 5b)
+  listSitePages(brandId: string, q?: string): Promise<SitePage[]>;
+  listKeywords(brandId: string, opts?: { cluster?: string; unclusteredOnly?: boolean; limit?: number }): Promise<Keyword[]>;
+  upsertKeywords(brandId: string, rows: KeywordUpsert[], opts?: { onlyOurFields?: boolean }): Promise<number>;
+  setClusters(brandId: string, assignments: { keyword: string; cluster: string | null }[]): Promise<number>;
+  searchProjects(brandId: string, opts: { q?: string; category?: string; state?: string; limit?: number }): Promise<Project[]>;
+  listArticleKeywordRefs(brandId: string): Promise<ArticleKeywordRef[]>;
+  listGscQueryPages(brandId: string, days: number): Promise<{ query: string; page: string; position: number; clicks: number }[]>;
+  logImport(brandId: string, kind: string, detail: string | null, rows: number, userId?: string | null): Promise<void>;
+  listImports(brandId: string): Promise<KeywordImport[]>;
 };
 
 export function articleUrl(a: { wp_link: string | null; slug: string }, brand: { website_url: string | null }): string {
@@ -226,6 +242,92 @@ export function createSupabaseStore(admin = createAdminSupabase()): Store {
     async getSetting(key) {
       const { data } = await admin.from("app_settings").select("value").eq("key", key).maybeSingle();
       return data?.value ?? null;
+    },
+    async listSitePages(brandId, q) {
+      let qq = admin.from("site_pages").select("*").eq("brand_id", brandId).order("title").limit(2000);
+      if (q) qq = qq.or(`title.ilike.%${q}%,slug.ilike.%${q}%,focus_keyword.ilike.%${q}%`);
+      const { data, error } = await qq;
+      if (error) fail(error);
+      return data ?? [];
+    },
+    async listKeywords(brandId, opts = {}) {
+      let q = admin.from("keywords").select("*").eq("brand_id", brandId).order("keyword").limit(opts.limit ?? 5000);
+      if (opts.cluster) q = q.eq("cluster", opts.cluster);
+      if (opts.unclusteredOnly) q = q.is("cluster", null);
+      const { data, error } = await q;
+      if (error) fail(error);
+      return data ?? [];
+    },
+    async upsertKeywords(brandId, rows, opts = {}) {
+      if (rows.length === 0) return 0;
+      if (opts.onlyOurFields) {
+        // GSC enrichment: never overwrite imported demand data; only our_* fields, and only add rows flagged source=gsc.
+        let n = 0;
+        for (const r of rows) {
+          const patch = { our_position: r.our_position ?? null, our_impressions: r.our_impressions ?? null, our_clicks: r.our_clicks ?? null, our_page: r.our_page ?? null, refreshed_at: new Date().toISOString() };
+          const { data } = await admin.from("keywords").update(patch).eq("brand_id", brandId).eq("keyword", r.keyword).select("id");
+          if (data?.length) n += data.length;
+          else if (r.source === "gsc") {
+            const { error } = await admin.from("keywords").insert({ brand_id: brandId, keyword: r.keyword, source: "gsc", ...patch });
+            if (!error) n++;
+          }
+        }
+        return n;
+      }
+      for (let i = 0; i < rows.length; i += 500) {
+        const batch = rows.slice(i, i + 500).map((r) => ({ brand_id: brandId, ...r, refreshed_at: new Date().toISOString() }));
+        const { error } = await admin.from("keywords").upsert(batch as never, { onConflict: "brand_id,keyword" });
+        if (error) fail(error);
+      }
+      return rows.length;
+    },
+    async setClusters(brandId, assignments) {
+      let n = 0;
+      for (const a of assignments) {
+        const { data } = await admin.from("keywords").update({ cluster: a.cluster }).eq("brand_id", brandId).eq("keyword", a.keyword).select("id");
+        n += data?.length ?? 0;
+      }
+      return n;
+    },
+    async searchProjects(brandId, opts) {
+      let q = admin.from("projects").select("*").eq("brand_id", brandId).order("imported_at", { ascending: false }).limit(opts.limit ?? 20);
+      if (opts.category) q = q.eq("category", opts.category);
+      if (opts.state) q = q.eq("state", opts.state.toUpperCase());
+      if (opts.q) q = q.textSearch("search", opts.q, { type: "websearch", config: "english" });
+      const { data, error } = await q;
+      if (error) fail(error);
+      return data ?? [];
+    },
+    async listArticleKeywordRefs(brandId) {
+      const { data, error } = await admin.from("articles").select("id,title,slug,status,primary_keyword,secondary_keywords,wp_link").eq("brand_id", brandId).neq("status", "archived");
+      if (error) fail(error);
+      return data ?? [];
+    },
+    async listGscQueryPages(brandId, days) {
+      const since = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
+      const { data, error } = await admin.from("metrics_daily").select("dim,metrics").eq("brand_id", brandId).eq("source", "gsc_query_page").gte("date", since).limit(20000);
+      if (error) fail(error);
+      const agg = new Map<string, { position: number; clicks: number; imps: number }>();
+      for (const r of data ?? []) {
+        const m = r.metrics as Record<string, number>;
+        const a = agg.get(r.dim) ?? { position: 0, clicks: 0, imps: 0 };
+        a.clicks += m.clicks ?? 0;
+        a.position += (m.position ?? 0) * (m.impressions ?? 0);
+        a.imps += m.impressions ?? 0;
+        agg.set(r.dim, a);
+      }
+      return [...agg].map(([dim, a]) => {
+        const [query, page] = dim.split("|", 2);
+        return { query, page, position: a.imps ? a.position / a.imps : 0, clicks: a.clicks };
+      });
+    },
+    async logImport(brandId, kind, detail, rows, userId = null) {
+      await admin.from("keyword_imports").insert({ brand_id: brandId, kind, detail, rows, created_by: userId });
+    },
+    async listImports(brandId) {
+      const { data, error } = await admin.from("keyword_imports").select("*").eq("brand_id", brandId).order("created_at", { ascending: false }).limit(50);
+      if (error) fail(error);
+      return data ?? [];
     },
   };
 }

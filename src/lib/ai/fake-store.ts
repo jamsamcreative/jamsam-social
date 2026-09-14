@@ -1,15 +1,15 @@
 // In-memory Store used by tool, brief, runner and MCP tests. Never imported by app code.
 import { vi } from "vitest";
-import type { Store, StoreJob, PostSummary, ArticleFull, StoreMedia } from "./store";
+import type { Store, StoreJob, PostSummary, ArticleFull, StoreMedia, SitePage, Keyword, Project, KeywordImport, ArticleKeywordRef } from "./store";
 import type { CategoryLike } from "./content-mix";
 
 export const BRAND = { id: "b1", slug: "acme", name: "Acme", timezone: "America/Los_Angeles", website_url: "https://acme.com", seo_suffix: "| Acme" };
 
-type Seed = { jobs?: StoreJob[]; posts?: PostSummary[]; articles?: ArticleFull[]; media?: StoreMedia[]; categories?: CategoryLike[] };
-export type FakeStore = Store & { jobs: StoreJob[]; created: { posts: unknown[]; articles: unknown[] } };
+type Seed = { jobs?: StoreJob[]; posts?: PostSummary[]; articles?: ArticleFull[]; media?: StoreMedia[]; categories?: CategoryLike[]; sitePages?: SitePage[]; keywords?: Keyword[]; projects?: Project[]; articleRefs?: ArticleKeywordRef[]; gscQueryPages?: { query: string; page: string; position: number; clicks: number }[]; imports?: KeywordImport[] };
+export type FakeStore = Store & { jobs: StoreJob[]; keywords: Keyword[]; imports: KeywordImport[]; created: { posts: unknown[]; articles: unknown[] } };
 
 export function fakeStore(over: Partial<Store> & Seed = {}): FakeStore {
-  const { jobs = [], posts = [], articles = [], media = [], categories = [], ...overrides } = over;
+  const { jobs = [], posts = [], articles = [], media = [], categories = [], sitePages = [], keywords = [], projects = [], articleRefs = [], gscQueryPages = [], imports = [], ...overrides } = over;
   const created = { posts: [] as unknown[], articles: [] as unknown[] };
   const base: Store = {
     listBrands: vi.fn(async () => [{ ...BRAND, connections: { wordpress: "connected" } }]),
@@ -46,8 +46,24 @@ export function fakeStore(over: Partial<Store> & Seed = {}): FakeStore {
       if (j) Object.assign(j, patch);
     }),
     getSetting: vi.fn(async () => null),
+    listSitePages: vi.fn(async (_b, q) => (q ? sitePages.filter((p) => p.title.toLowerCase().includes(q.toLowerCase())) : sitePages)),
+    listKeywords: vi.fn(async (_b, o = {}) => keywords.filter((k) => (!o.cluster || k.cluster === o.cluster) && (!o.unclusteredOnly || !k.cluster)).slice(0, o.limit ?? 5000)),
+    upsertKeywords: vi.fn(async (_b, rows) => {
+      for (const r of rows) {
+        const cur = keywords.find((k) => k.keyword === r.keyword);
+        if (cur) Object.assign(cur, r);
+        else keywords.push({ id: `k${keywords.length + 1}`, brand_id: BRAND.id, cluster: null, volume: null, difficulty: null, intent: null, competitor: null, competitor_position: null, our_position: null, our_impressions: null, our_clicks: null, our_page: null, source: "csv", notes: null, imported_at: new Date().toISOString(), refreshed_at: null, ...r });
+      }
+      return rows.length;
+    }),
+    setClusters: vi.fn(async (_b, a) => { let n = 0; for (const x of a) { const k = keywords.find((y) => y.keyword === x.keyword); if (k) { k.cluster = x.cluster; n++; } } return n; }),
+    searchProjects: vi.fn(async (_b, o) => projects.filter((p) => (!o.q || (p.title + " " + (p.description ?? "")).toLowerCase().includes(o.q.toLowerCase())) && (!o.category || p.category === o.category) && (!o.state || p.state === o.state.toUpperCase())).slice(0, o.limit ?? 20)),
+    listArticleKeywordRefs: vi.fn(async () => articleRefs),
+    listGscQueryPages: vi.fn(async () => gscQueryPages),
+    logImport: vi.fn(async (_b, kind, detail, rows) => { imports.push({ id: `i${imports.length + 1}`, brand_id: BRAND.id, kind, detail, rows, created_by: null, created_at: new Date().toISOString() }); }),
+    listImports: vi.fn(async () => imports),
   };
-  return Object.assign(base, overrides, { jobs, created });
+  return Object.assign(base, overrides, { jobs, keywords, imports, created });
 }
 
 export function job(over: Partial<StoreJob> = {}): StoreJob {

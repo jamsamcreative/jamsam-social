@@ -3,6 +3,7 @@ import { computeContentMix, type ContentMix } from "./content-mix";
 import { parseJobInput, type JobType } from "./schemas";
 import { INSTRUCTIONS, HARD_RULES } from "./prompts/instructions";
 import type { GuidelineKind } from "@/lib/guidelines/kinds";
+import { normaliseKeyword, rankOpportunities } from "@/lib/seo/score";
 
 export type Brief = {
   job: { id: string; type: JobType; input: unknown };
@@ -14,6 +15,10 @@ export type Brief = {
   media?: StoreMedia[];
   existing_articles?: ArticleSummary[];
   recent_captions?: { platform: string; caption: string }[];
+  site_pages?: { title: string; url: string; slug: string; focus_keyword: string | null }[];
+  opportunity?: { keyword: string; cluster: string | null; volume: number | null; difficulty: number | null; intent: string | null; our_page: string | null; our_position: number | null; suggested_action: string; score: number } | null;
+  keywords?: { keyword: string; volume: number | null; intent: string | null }[];
+  existing_clusters?: string[];
   hard_rules: string;
   instructions: string;
 };
@@ -44,9 +49,22 @@ export async function buildBrief(store: Store, j: StoreJob): Promise<Brief> {
     brief.recent_captions = await recentCaptions();
   }
   if (j.type === "article") {
-    const [media, existing] = await Promise.all([store.listMedia(brand.id), store.listArticles(brand.id)]);
+    const [media, existing, pages, keywords] = await Promise.all([store.listMedia(brand.id), store.listArticles(brand.id), store.listSitePages(brand.id), store.listKeywords(brand.id)]);
     brief.media = media;
     brief.existing_articles = existing;
+    brief.site_pages = pages.slice(0, 300).map((p) => ({ title: p.title, url: p.url, slug: p.slug, focus_keyword: p.focus_keyword }));
+    const want = normaliseKeyword(input.primary_keyword || input.topic || "");
+    const hit = keywords.find((k) => k.keyword === want) ?? keywords.find((k) => want.includes(k.keyword) || k.keyword.includes(want));
+    if (hit) {
+      const [r] = rankOpportunities([hit], new Set());
+      brief.opportunity = { keyword: r.keyword, cluster: r.cluster, volume: r.volume, difficulty: r.difficulty, intent: r.intent, our_page: r.our_page, our_position: r.our_position, suggested_action: r.action, score: r.score };
+    } else brief.opportunity = null;
+  }
+  if (j.type === "seo_cluster") {
+    const limit = Number((parsed.data as { limit?: number }).limit ?? 300);
+    const [unclustered, all] = await Promise.all([store.listKeywords(brand.id, { unclusteredOnly: true, limit }), store.listKeywords(brand.id)]);
+    brief.keywords = unclustered.map((k) => ({ keyword: k.keyword, volume: k.volume, intent: k.intent }));
+    brief.existing_clusters = [...new Set(all.map((k) => k.cluster).filter((c): c is string => Boolean(c)))].sort();
   }
   return brief;
 }

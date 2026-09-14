@@ -4,6 +4,7 @@ import { validateCaption } from "../captions";
 import { captionsSchema } from "../schemas";
 import { finalSeoTitle, metaDescriptionWarning } from "@/lib/articles/push";
 import type { Json, MediaItem } from "@/lib/database.types";
+import { runCannibalizationCheck } from "./seo";
 
 const brand = z.string().describe("Brand slug");
 const target = z.object({
@@ -108,6 +109,11 @@ export const createArticle = defineTool({
   run: async (ctx, i) => {
     const b = await requireBrand(ctx, i.brand);
     if (DATA_IMG.test(i.content_html)) throw new ToolError("content_html contains a data: image URL. Use hosted image URLs from list_media_assets or search_wp_media.");
+    // A NEW article must not compete with an existing page; OPTIMIZE/REWRITE may reuse the existing slug on purpose.
+    if (i.decision === "new") {
+      const check = await runCannibalizationCheck(ctx, b.id, i.primary_keyword ?? i.title, i.slug);
+      if (check.has_conflict) throw new ToolError(`${check.verdict} Use decision "optimize" or "rewrite" targeting that page, or choose a different keyword/slug.`);
+    }
     const { article_id } = await ctx.store.createArticle({
       brand_id: b.id, title: i.title, slug: i.slug, content_html: i.content_html, excerpt: i.excerpt ?? null, seo_title: i.seo_title ?? null,
       meta_description: i.meta_description ?? null, primary_keyword: i.primary_keyword ?? null, secondary_keywords: i.secondary_keywords,
