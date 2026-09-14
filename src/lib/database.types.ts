@@ -6,7 +6,7 @@ type BrandRow = {
   seo_suffix: string | null; active: boolean; created_at: string; updated_at: string;
 };
 type ConnectionRow = {
-  id: string; brand_id: string; provider: "wordpress" | "meta" | "pinterest" | "semrush"; config: Json; secret: string | null;
+  id: string; brand_id: string; provider: "wordpress" | "meta" | "pinterest" | "semrush" | "google_analytics" | "search_console" | "meta_ads" | "gbp"; config: Json; secret: string | null;
   status: "not_connected" | "connected" | "failing"; last_checked: string | null; last_error: string | null;
   created_at: string; updated_at: string;
 };
@@ -59,6 +59,11 @@ type OauthTokenRow = {
   id: string; client_id: string; user_id: string; access_token_hash: string; refresh_token_hash: string; scope: string | null;
   access_expires_at: string; refresh_expires_at: string; revoked_at: string | null; last_used_at: string | null; created_at: string;
 };
+type MetricsDailyRow = {
+  brand_id: string; source: "ga4_channel" | "ga4_campaign" | "ga4_total" | "gsc_total" | "gsc_query" | "gsc_page" | "meta_ads_campaign" | "meta_ads_total";
+  date: string; dim: string; metrics: Json; extra: Json | null; synced_at: string;
+};
+type SyncRunRow = { brand_id: string; source: string; last_run_at: string | null; last_ok_at: string | null; last_error: string | null; backfilled: boolean };
 type PostCategoryRow = {
   id: string; brand_id: string; name: string; slug: string; target_share: number; description: string | null;
   sort_order: number; created_at: string;
@@ -84,6 +89,8 @@ export type Database = {
       article_media_map: Table<ArticleMediaMapRow, "brand_id" | "source_url" | "wp_media_id" | "wp_url">;
       generation_jobs: Table<GenerationJobRow, "brand_id" | "type" | "input">;
       post_categories: Table<PostCategoryRow, "brand_id" | "name" | "slug" | "target_share">;
+      metrics_daily: Table<MetricsDailyRow, "brand_id" | "source" | "date" | "dim" | "metrics">;
+      sync_runs: Table<SyncRunRow, "brand_id" | "source">;
       oauth_clients: Table<OauthClientRow, "client_id" | "redirect_uris">;
       oauth_codes: Table<OauthCodeRow, "code_hash" | "client_id" | "user_id" | "redirect_uri" | "code_challenge" | "expires_at">;
       oauth_tokens: Table<OauthTokenRow, "client_id" | "user_id" | "access_token_hash" | "refresh_token_hash" | "access_expires_at" | "refresh_expires_at">;
@@ -107,6 +114,7 @@ export type Database = {
       job_type: GenerationJobRow["type"];
       job_status: GenerationJobRow["status"];
       job_runner: GenerationJobRow["runner"];
+      metric_source: MetricsDailyRow["source"];
     };
     CompositeTypes: Record<string, never>;
   };

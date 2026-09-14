@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type React from "react";
 import type { Provider } from "@/lib/connections/types";
 
 type Field = { name: string; label: string; secret?: boolean; placeholder?: string; help?: string; type?: string };
@@ -37,11 +38,19 @@ export const FIELDS: Record<Provider, Field[]> = {
     { name: "database", label: "Database", placeholder: "us" },
     { name: "api_key", label: "API key", secret: true, help: "Leave blank to keep the saved one." },
   ],
+  google_analytics: [{ name: "property_id", label: "GA4 property ID", placeholder: "450532525", help: "Numeric ID from GA4 → Admin → Property settings. Google Ads spend appears automatically when the Ads account is linked to this property." }],
+  search_console: [{ name: "site_url", label: "Search Console property", placeholder: "sc-domain:client.com", help: "Domain property: sc-domain:client.com. URL-prefix property: https://client.com/ (with trailing slash)." }],
+  meta_ads: [
+    { name: "ad_account_id", label: "Ad account ID", placeholder: "act_1234567890" },
+    { name: "access_token", label: "Marketing API token (ads_read)", secret: true, help: "A user/system-user token with ads_read for the client's ad account. This is separate from the Page token used for publishing. Leave blank to keep the saved one." },
+  ],
+  gbp: [],
 };
 
-export function ConnectionFields({ provider, config }: { provider: Provider; config: Record<string, unknown> }) {
+export function ConnectionFields({ provider, config, extras }: { provider: Provider; config: Record<string, unknown>; extras?: React.ReactNode }) {
   return (
     <div className="space-y-3">
+      {extras}
       {FIELDS[provider].map((f) => (
         <div key={f.name} className="space-y-1">
           <Label htmlFor={`${provider}-${f.name}`}>{f.label}</Label>
