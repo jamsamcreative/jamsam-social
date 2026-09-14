@@ -86,8 +86,11 @@ const articleFields = {
   rationale: z.string().max(2000).optional(),
 };
 
-function articleWarnings(i: { seo_title?: string; title: string; meta_description?: string }, suffix: string | null): string[] {
+function articleWarnings(i: { seo_title?: string; title: string; meta_description?: string; content_html: string }, suffix: string | null): string[] {
   const out: string[] = [];
+  const text = i.content_html.replace(/<[^>]+>/g, " ");
+  if (/[—–]/.test(text)) out.push("Body contains em/en dashes; rewrite those sentences without dashes");
+  if (/\bactually\b/i.test(text)) out.push('Body uses the word "actually"; rewrite those sentences without it');
   const final = finalSeoTitle(i.seo_title ?? null, i.title, suffix);
   if (suffix && i.seo_title && !i.seo_title.trim().endsWith(suffix.trim())) out.push(`seo_title should end with the brand suffix "${suffix}" (will render as "${final}")`);
   const md = metaDescriptionWarning(i.meta_description ?? null);

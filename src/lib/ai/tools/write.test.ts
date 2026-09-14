@@ -48,6 +48,10 @@ describe("create_article", () => {
     expect(out.warnings).toEqual(expect.arrayContaining([expect.stringMatching(/suffix/), expect.stringMatching(/120/)]));
     expect(store.createArticle).toHaveBeenCalledWith(expect.objectContaining({ brand_id: BRAND.id, source: "ai", featured_media: { url: "https://cdn/x.jpg", alt: "A deck" } }));
   });
+  it("warns about dashes and 'actually' in the body without rejecting", async () => {
+    const out = (await createArticle.run(ctx(), { ...base, content_html: "<p>It's actually fine — mostly.</p>" })) as { warnings: string[] };
+    expect(out.warnings).toEqual(expect.arrayContaining([expect.stringMatching(/dashes/), expect.stringMatching(/actually/)]));
+  });
   it("rejects data: image URLs", async () => {
     await expect(createArticle.run(ctx(), { ...base, content_html: '<img src="data:image/png;base64,AAA">' })).rejects.toThrow(/data:/);
   });
