@@ -153,7 +153,7 @@ export function PinForm({ brand, pin, assets, boards, projects, prefill }: Props
               </select>
             )}
           </div>
-          <Input type="url" value={imageUrl} onChange={(e) => { setImageUrl(e.target.value); setMediaAssetId(null); }} placeholder="or paste an image URL" />
+          <Input id="pin-image-url" type="url" value={imageUrl} onChange={(e) => { setImageUrl(e.target.value); setMediaAssetId(null); }} placeholder="or paste an image URL" />
           <div className="hidden">
             <MediaPicker assets={assets} value={[]} onChange={() => {}} pickOne={pickAsset} openExternal={pickerOpen} onOpenChange={setPickerOpen} />
           </div>
