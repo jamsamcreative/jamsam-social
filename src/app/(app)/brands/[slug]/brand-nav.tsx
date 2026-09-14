@@ -9,6 +9,7 @@ export function BrandNav({ slug }: { slug: string }) {
     { href: `/brands/${slug}`, label: "Overview" },
     { href: `/brands/${slug}/connections`, label: "Connections" },
     { href: `/brands/${slug}/guidelines`, label: "Guidelines" },
+    { href: `/brands/${slug}/content-mix`, label: "Content mix" },
   ];
   return (
     <nav className="flex gap-1 border-b">

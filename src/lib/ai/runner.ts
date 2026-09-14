@@ -10,7 +10,8 @@ import { buildSystemPrompt } from "./prompts/system";
 import { TERMINAL_TOOL, parseJobResult } from "./schemas";
 import type { Json } from "@/lib/database.types";
 
-export const DEFAULT_MODEL = "claude-opus-5";
+import { DEFAULT_MODEL } from "@/lib/settings/models";
+export { DEFAULT_MODEL };
 export type RunnerDeps = {
   store: Store;
   client: Pick<Anthropic, "messages">;
