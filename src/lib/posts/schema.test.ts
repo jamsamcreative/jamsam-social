@@ -26,3 +26,14 @@ describe("postFormSchema", () => {
     expect(() => postFormSchema.parse({ ...base, media: [{ url: "ftp://x/a" }] })).toThrow();
   });
 });
+
+describe("postFormSchema category", () => {
+  const base = {
+    brand_id: "3f5c1c1e-1b9a-4c1e-9a1e-1b9a4c1e9a1e", title: "t", link_url: "", media: [],
+    targets: [{ platform: "facebook", enabled: true, caption: "", scheduled_local: "" }, { platform: "instagram", enabled: false, caption: "", scheduled_local: "" }],
+  };
+  it("accepts an optional category_id", () => {
+    expect(postFormSchema.parse(base).category_id).toBeNull();
+    expect(postFormSchema.parse({ ...base, category_id: "3f5c1c1e-1b9a-4c1e-9a1e-1b9a4c1e9a1e" }).category_id).toBe("3f5c1c1e-1b9a-4c1e-9a1e-1b9a4c1e9a1e");
+  });
+});
