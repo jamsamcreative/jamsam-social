@@ -43,7 +43,7 @@ type ArticleRow = {
 };
 type ArticleMediaMapRow = { id: string; brand_id: string; source_url: string; wp_media_id: number; wp_url: string; created_at: string };
 type GenerationJobRow = {
-  id: string; brand_id: string; type: "caption" | "article" | "promo" | "rewrite";
+  id: string; brand_id: string; type: "caption" | "article" | "promo" | "rewrite" | "seo_cluster";
   status: "queued" | "claimed" | "running" | "completed" | "failed"; runner: "in_app" | "mcp";
   input: Json; result: Json | null; error: string | null; post_id: string | null; article_id: string | null;
   claimed_by: string | null; claimed_at: string | null; started_at: string | null; finished_at: string | null;
@@ -60,10 +60,24 @@ type OauthTokenRow = {
   access_expires_at: string; refresh_expires_at: string; revoked_at: string | null; last_used_at: string | null; created_at: string;
 };
 type MetricsDailyRow = {
-  brand_id: string; source: "ga4_channel" | "ga4_campaign" | "ga4_total" | "gsc_total" | "gsc_query" | "gsc_page" | "meta_ads_campaign" | "meta_ads_total";
+  brand_id: string; source: "ga4_channel" | "ga4_campaign" | "ga4_total" | "gsc_total" | "gsc_query" | "gsc_page" | "gsc_query_page" | "meta_ads_campaign" | "meta_ads_total";
   date: string; dim: string; metrics: Json; extra: Json | null; synced_at: string;
 };
 type SyncRunRow = { brand_id: string; source: string; last_run_at: string | null; last_ok_at: string | null; last_error: string | null; backfilled: boolean };
+type SitePageRow = {
+  id: string; brand_id: string; wp_id: number; type: string; slug: string; url: string; title: string; excerpt: string | null; focus_keyword: string | null;
+  featured_image_url: string | null; modified_at: string | null; mirrored_at: string;
+};
+type KeywordRow = {
+  id: string; brand_id: string; keyword: string; cluster: string | null; volume: number | null; difficulty: number | null; intent: string | null;
+  competitor: string | null; competitor_position: number | null; our_position: number | null; our_impressions: number | null; our_clicks: number | null;
+  our_page: string | null; source: "csv" | "semrush" | "gsc" | "manual"; notes: string | null; imported_at: string; refreshed_at: string | null;
+};
+type ProjectRow = {
+  id: string; brand_id: string; external_id: string | null; title: string; url: string | null; category: string | null; location: string | null; state: string | null;
+  dims: string | null; description: string | null; images: Json; tags: string[]; imported_at: string;
+};
+type KeywordImportRow = { id: string; brand_id: string; kind: string; detail: string | null; rows: number; created_by: string | null; created_at: string };
 type PostCategoryRow = {
   id: string; brand_id: string; name: string; slug: string; target_share: number; description: string | null;
   sort_order: number; created_at: string;
@@ -91,6 +105,10 @@ export type Database = {
       post_categories: Table<PostCategoryRow, "brand_id" | "name" | "slug" | "target_share">;
       metrics_daily: Table<MetricsDailyRow, "brand_id" | "source" | "date" | "dim" | "metrics">;
       sync_runs: Table<SyncRunRow, "brand_id" | "source">;
+      site_pages: Table<SitePageRow, "brand_id" | "wp_id" | "type" | "slug" | "url" | "title">;
+      keywords: Table<KeywordRow, "brand_id" | "keyword">;
+      projects: Table<ProjectRow, "brand_id" | "title">;
+      keyword_imports: Table<KeywordImportRow, "brand_id" | "kind">;
       oauth_clients: Table<OauthClientRow, "client_id" | "redirect_uris">;
       oauth_codes: Table<OauthCodeRow, "code_hash" | "client_id" | "user_id" | "redirect_uri" | "code_challenge" | "expires_at">;
       oauth_tokens: Table<OauthTokenRow, "client_id" | "user_id" | "access_token_hash" | "refresh_token_hash" | "access_expires_at" | "refresh_expires_at">;
@@ -115,6 +133,7 @@ export type Database = {
       job_status: GenerationJobRow["status"];
       job_runner: GenerationJobRow["runner"];
       metric_source: MetricsDailyRow["source"];
+      keyword_source: KeywordRow["source"];
     };
     CompositeTypes: Record<string, never>;
   };

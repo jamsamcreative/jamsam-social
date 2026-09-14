@@ -45,7 +45,7 @@ export const completeJob = defineTool({
     }
     const parsed = parseJobResult(j.type, result);
     if (!parsed.success) {
-      throw new ToolError(`result does not match the ${j.type} result shape: ${parsed.error.issues.map((i) => `${i.path.join(".")} ${i.message}`).join("; ")}`);
+      throw new ToolError(`result does not match the ${j.type} result shape: ${parsed.error.issues.map((i: { path: PropertyKey[]; message: string }) => `${i.path.join(".")} ${i.message}`).join("; ")}`);
     }
     const r = parsed.data as Record<string, unknown>;
     const done = await ctx.store.transitionJob(job_id, ["claimed", "running"], {
