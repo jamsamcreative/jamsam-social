@@ -10,6 +10,8 @@ const good = {
   META_APP_ID: "123",
   META_APP_SECRET: "shh",
   CRON_SECRET: "test-cron-secret-0000",
+  ANTHROPIC_API_KEY: "sk-ant-test",
+  MCP_TOKEN: "test-mcp-token-0000000000000000000000",
 };
 
 describe("parseEnv", () => {

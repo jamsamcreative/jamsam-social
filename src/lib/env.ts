@@ -13,6 +13,8 @@ const schema = z.object({
   META_APP_ID: z.string().min(1),
   META_APP_SECRET: z.string().min(1),
   CRON_SECRET: z.string().min(16, "CRON_SECRET must be at least 16 chars (openssl rand -hex 32)"),
+  ANTHROPIC_API_KEY: z.string().min(1, "ANTHROPIC_API_KEY is required"),
+  MCP_TOKEN: z.string().min(32, "MCP_TOKEN must be at least 32 chars (openssl rand -base64 32)"),
 });
 
 export type Env = z.infer<typeof schema>;
@@ -36,4 +38,6 @@ export const env: Env = parseEnv({
   META_APP_ID: process.env.META_APP_ID,
   META_APP_SECRET: process.env.META_APP_SECRET,
   CRON_SECRET: process.env.CRON_SECRET,
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+  MCP_TOKEN: process.env.MCP_TOKEN,
 });
