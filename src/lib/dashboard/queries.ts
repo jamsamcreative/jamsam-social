@@ -1,6 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { listBrands, type Brand } from "@/lib/brands/queries";
 import { PROVIDER_ORDER, type Provider } from "@/lib/connections";
+import { countJobsByStatus } from "@/lib/jobs/queries";
 import type { Database } from "@/lib/database.types";
 
 type ConnectionStatus = Database["public"]["Enums"]["connection_status"];
@@ -10,6 +11,7 @@ export type DashboardBrand = Brand & {
   pending_approval_count: number;
   next_scheduled: { at: string; title: string } | null;
   article_draft_count: number;
+  jobs: { running: number; failed: number };
 };
 
 export async function getDashboardBrands(): Promise<DashboardBrand[]> {
@@ -35,6 +37,7 @@ export async function getDashboardBrands(): Promise<DashboardBrand[]> {
   ]);
   if (cErr) throw new Error(cErr.message);
   if (mErr) throw new Error(mErr.message);
+  const jobCounts = await countJobsByStatus(ids);
   type Up = { scheduled_at: string | null; post: { brand_id: string; title: string } };
 
   return brands.map((b) => {
@@ -45,6 +48,6 @@ export async function getDashboardBrands(): Promise<DashboardBrand[]> {
     const nextUp = ((upcoming ?? []) as unknown as Up[]).find((u) => u.post.brand_id === b.id && u.scheduled_at);
     const next_scheduled = nextUp ? { at: nextUp.scheduled_at!, title: nextUp.post.title } : null;
     const article_draft_count = (draftArticles ?? []).filter((a) => a.brand_id === b.id).length;
-    return { ...b, connections, media_count, pending_approval_count, next_scheduled, article_draft_count };
+    return { ...b, connections, media_count, pending_approval_count, next_scheduled, article_draft_count, jobs: jobCounts[b.id] ?? { running: 0, failed: 0 } };
   });
 }
