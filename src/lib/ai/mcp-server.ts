@@ -5,10 +5,24 @@ import { allTools } from "./tools/registry";
 import { ToolError, type ToolCtx } from "./tools/types";
 import type { Store } from "./store";
 
-function tokenOk(req: Request, want: string): boolean {
+function bearer(req: Request): string {
   const h = req.headers.get("authorization") ?? "";
-  const given = h.startsWith("Bearer ") ? h.slice(7) : "";
+  return h.startsWith("Bearer ") ? h.slice(7) : "";
+}
+
+function staticTokenOk(given: string, want: string): boolean {
   return given.length === want.length && timingSafeEqual(Buffer.from(given), Buffer.from(want));
+}
+
+export type McpAuth = { kind: "static" } | { kind: "oauth"; userId: string; clientId: string } | null;
+
+/** Static MCP_TOKEN (Claude Code / desktop bridge) or an OAuth access token (Claude.ai connectors). */
+export async function authenticate(req: Request, deps: { token: string; verifyOauth?: (token: string) => Promise<{ user_id: string; client_id: string } | null> }): Promise<McpAuth> {
+  const given = bearer(req);
+  if (!given) return null;
+  if (staticTokenOk(given, deps.token)) return { kind: "static" };
+  const v = deps.verifyOauth ? await deps.verifyOauth(given) : null;
+  return v ? { kind: "oauth", userId: v.user_id, clientId: v.client_id } : null;
 }
 
 export function createMcpServer(ctx: ToolCtx): McpServer {
@@ -29,15 +43,20 @@ export function createMcpServer(ctx: ToolCtx): McpServer {
 }
 
 /** Stateless: a fresh server + transport per request, no session ids. POST only. */
-export async function handleMcpRequest(req: Request, deps: { store: Store; token: string }): Promise<Response> {
-  if (!tokenOk(req, deps.token)) {
+export async function handleMcpRequest(
+  req: Request,
+  deps: { store: Store; token: string; origin?: string; verifyOauth?: (token: string) => Promise<{ user_id: string; client_id: string } | null> },
+): Promise<Response> {
+  const auth = await authenticate(req, deps);
+  if (!auth) {
+    const meta = deps.origin ? `, resource_metadata="${deps.origin.replace(/\/+$/, "")}/.well-known/oauth-protected-resource"` : "";
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
-      headers: { "WWW-Authenticate": 'Bearer realm="jamsam-social"', "Content-Type": "application/json" },
+      headers: { "WWW-Authenticate": `Bearer realm="jamsam-social"${meta}`, "Content-Type": "application/json" },
     });
   }
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { Allow: "POST" } });
-  const server = createMcpServer({ store: deps.store, actor: { kind: "mcp" } });
+  const server = createMcpServer({ store: deps.store, actor: { kind: "mcp", userId: auth.kind === "oauth" ? auth.userId : undefined } });
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   try {
