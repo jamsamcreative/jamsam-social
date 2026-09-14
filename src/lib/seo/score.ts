@@ -30,9 +30,8 @@ export function intentWeight(intent?: string | null): number {
 }
 
 export function opportunityAction(k: KeywordLike, targetedByUs = false): string {
-  if (k.our_page || targetedByUs) {
-    return k.our_position ? `OPTIMIZE (ranks #${Math.round(k.our_position)})` : "OPTIMIZE (page exists, not ranking)";
-  }
+  if (k.our_position && k.our_position > 0) return `OPTIMIZE (ranks #${Math.round(k.our_position)})`;
+  if (k.our_page || targetedByUs) return "OPTIMIZE (page exists, not ranking)";
   return "NEW";
 }
 

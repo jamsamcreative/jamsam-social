@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RichEditor } from "./editor";
+import { SeoHints } from "./seo-hints";
 import { TermSelect } from "./term-select";
 import { MediaPicker } from "@/components/posts/media-picker";
 import { saveArticle, type ActionResult } from "@/lib/articles/actions";
@@ -124,6 +125,14 @@ export function ArticleForm({ brand, article, assets, terms }: { brand: Brand; a
             <div className="space-y-1">
               <Label htmlFor="kw">Focus keyword</Label>
               <Input id="kw" value={kw} onChange={(e) => setKw(e.target.value)} />
+              <SeoHints
+                brandId={brand.id}
+                articleId={article?.id ?? null}
+                keyword={kw}
+                slug={slug}
+                title={title}
+                onInsertLink={(url, text) => setHtml((h) => `${h}<p><a href="${url}">${text}</a></p>`)}
+              />
             </div>
             <div className="space-y-1">
               <Label htmlFor="kws">Secondary keywords (comma separated)</Label>

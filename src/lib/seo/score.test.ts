@@ -32,6 +32,7 @@ describe("score", () => {
     expect(all[0].keyword).toBe("horse barns");
     expect(all[0].action).toBe("OPTIMIZE (ranks #17)");
     expect(rankOpportunities(ks, new Set(), { action: "NEW" }).map((k) => k.keyword)).toEqual(["barn house kit homes", "pole barns garages"]);
+    expect(opportunityAction({ keyword: "x", our_position: 6 })).toBe("OPTIMIZE (ranks #6)"); // a CSV-supplied ranking counts too
     expect(rankOpportunities(ks, new Set(), { cluster: "Barndominiums" })).toHaveLength(1);
     expect(rankOpportunities(ks, new Set(), { maxDifficulty: 10 })).toHaveLength(1);
     expect(rankOpportunities(ks, new Set(["pole barns garages"]))[2].action).toMatch(/OPTIMIZE/);

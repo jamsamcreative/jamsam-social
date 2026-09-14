@@ -11,5 +11,6 @@ export default async function globalTeardown() {
   await fetch(`${url}/rest/v1/articles?title=like.E2E%20article%20*`, { method: "DELETE", headers });
   await fetch(`${url}/rest/v1/generation_jobs?input->>topic=like.E2E%20topic%20*`, { method: "DELETE", headers });
   await fetch(`${url}/rest/v1/post_categories?name=like.E2E%20cat%20*`, { method: "DELETE", headers });
+  await fetch(`${url}/rest/v1/keywords?keyword=like.e2e%20*`, { method: "DELETE", headers });
   await fetch(`${url}/rest/v1/brands?slug=like.e2e-brand-*`, { method: "DELETE", headers });
 }

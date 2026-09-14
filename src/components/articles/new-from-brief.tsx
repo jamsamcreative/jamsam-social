@@ -1,6 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,12 +13,17 @@ type Decision = "new" | "rewrite" | "optimize";
 type Runner = "in_app" | "mcp";
 
 export function NewFromBrief({ brandId, defaultRunner }: { brandId: string; defaultRunner: Runner }) {
-  const [open, setOpen] = useState(false);
-  const [topic, setTopic] = useState("");
-  const [primary, setPrimary] = useState("");
+  // "Write this" from the SEO page prefills the brief and opens the dialog (read once at mount).
+  const sp = useSearchParams();
+  const brief = sp.get("brief") ?? "";
+  const briefDecision = sp.get("decision");
+  const briefCluster = sp.get("cluster");
+  const [open, setOpen] = useState(Boolean(brief));
+  const [topic, setTopic] = useState(brief);
+  const [primary, setPrimary] = useState(brief);
   const [secondary, setSecondary] = useState("");
-  const [decision, setDecision] = useState<Decision>("new");
-  const [notes, setNotes] = useState("");
+  const [decision, setDecision] = useState<Decision>(briefDecision === "rewrite" || briefDecision === "optimize" ? briefDecision : "new");
+  const [notes, setNotes] = useState(brief && briefCluster ? `Topic cluster: ${briefCluster}. Suggested action: ${briefDecision === "optimize" ? "optimize the existing page for this keyword" : "new article"}.` : "");
   const [runner, setRunner] = useState<Runner>(defaultRunner);
   const [pending, start] = useTransition();
   const router = useRouter();
