@@ -5,6 +5,7 @@ import { listArticles, type Article } from "@/lib/articles/queries";
 import { ArticleStatusBadge } from "@/components/articles/status-badge";
 import { Button } from "@/components/ui/button";
 import { NewFromBrief } from "@/components/articles/new-from-brief";
+import { getDefaultRunner } from "@/lib/settings/queries";
 import { formatInZone } from "@/lib/time/zoned";
 
 export const metadata = { title: "Articles" };
@@ -33,7 +34,7 @@ export default async function ArticlesPage({ searchParams }: { searchParams: Pro
     );
   }
   const filter = FILTERS.find((f) => f.key === status) ?? FILTERS[0];
-  const articles = await listArticles({ brandId: brand.id, status: filter.statuses });
+  const [articles, defaultRunner] = await Promise.all([listArticles({ brandId: brand.id, status: filter.statuses }), getDefaultRunner()]);
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -42,7 +43,7 @@ export default async function ArticlesPage({ searchParams }: { searchParams: Pro
           <p className="text-sm text-muted-foreground">{brand.name}. Switch brands in the header.</p>
         </div>
         <div className="flex gap-2">
-          <NewFromBrief brandId={brand.id} />
+          <NewFromBrief brandId={brand.id} defaultRunner={defaultRunner} />
           <Button nativeButton={false} render={<Link href="/articles/new" />}>
             New article
           </Button>

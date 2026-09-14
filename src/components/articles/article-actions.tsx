@@ -52,7 +52,7 @@ export function ArticleActions({ article, wpAdminUrl }: { article: ArticleWithBr
                 input: { article_id: article.id, scheduled_after: article.published_at ?? new Date().toISOString() },
               });
               if (r.ok) {
-                toast.success("Promo post queued — see Jobs");
+                toast.success("Promo post queued — see Jobs (MCP jobs run from your Claude session)");
                 router.push("/jobs");
               } else toast.error(r.error);
             })

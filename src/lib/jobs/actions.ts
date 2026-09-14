@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { parseJobInput, type JobType, type JobRunner } from "@/lib/ai/schemas";
 import { runJob } from "@/lib/ai/runner";
+import { getDefaultRunner } from "@/lib/settings/queries";
 import type { Json } from "@/lib/database.types";
 
 export type ActionResult = { ok: true; id?: string } | { ok: false; error: string };
@@ -21,7 +22,7 @@ export async function enqueueJob(args: { brandId: string; type: JobType; input: 
   if (!user) return { ok: false, error: "Not signed in" };
   const parsed = parseJobInput(args.type, args.input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid job input" };
-  const runner = args.runner ?? "in_app";
+  const runner = args.runner ?? (await getDefaultRunner());
   const input = parsed.data as Record<string, unknown>;
   const { data, error } = await supabase
     .from("generation_jobs")

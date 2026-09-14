@@ -10,13 +10,15 @@ type Props = { brandId: string; ensureSaved: () => Promise<string | null>; onRes
 /** "Write captions": saves the draft, queues a caption job, polls it, and hands the captions back to the form. */
 export function GenerateCaptions({ brandId, ensureSaved, onResult }: Props) {
   const [jobId, setJobId] = useState<string | null>(null);
+  const [runner, setRunner] = useState<"in_app" | "mcp" | null>(null);
 
   useEffect(() => {
     if (!jobId) return;
     const timer = setInterval(async () => {
       const res = await fetch(`/api/jobs/${jobId}`, { cache: "no-store" });
       if (!res.ok) return;
-      const j = (await res.json()) as { status: string; result: CaptionResult | null; error: string | null };
+      const j = (await res.json()) as { status: string; runner: "in_app" | "mcp"; result: CaptionResult | null; error: string | null };
+      setRunner(j.runner);
       if (j.status === "completed" && j.result) {
         onResult(j.result);
         toast.success("Captions written — review before submitting");
@@ -35,10 +37,15 @@ export function GenerateCaptions({ brandId, ensureSaved, onResult }: Props) {
     const r = await enqueueJob({ brandId, type: "caption", input: { post_id: postId } });
     if (!r.ok) return void toast.error(r.error);
     setJobId(r.id ?? null);
+    toast.info("Caption job queued — if it's on the MCP runner, run it from your Claude session and keep this page open");
   };
+  const waitingOnMcp = !!jobId && runner === "mcp";
   return (
-    <Button type="button" variant="outline" disabled={!!jobId} onClick={start}>
-      {jobId ? "Writing captions…" : "✨ Write captions"}
-    </Button>
+    <div className="flex items-center gap-3">
+      <Button type="button" variant="outline" disabled={!!jobId} onClick={start}>
+        {jobId ? (waitingOnMcp ? "Waiting for your Claude session…" : "Writing captions…") : "✨ Write captions"}
+      </Button>
+      {waitingOnMcp && <p className="text-xs text-muted-foreground">Tell Claude: &quot;check jamsam jobs and do the queued ones&quot;. See Jobs for the connect command.</p>}
+    </div>
   );
 }

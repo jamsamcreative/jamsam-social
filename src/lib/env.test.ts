@@ -27,3 +27,11 @@ describe("parseEnv", () => {
     expect(() => parseEnv({ ...good, CONNECTIONS_ENCRYPTION_KEY: "c2hvcnQ=" })).toThrow(/32 bytes/);
   });
 });
+
+describe("parseEnv optional AI key", () => {
+  it("accepts a missing ANTHROPIC_API_KEY (MCP-only setups)", () => {
+    const { ANTHROPIC_API_KEY: _drop, ...rest } = good;
+    void _drop;
+    expect(parseEnv(rest).ANTHROPIC_API_KEY).toBeUndefined();
+  });
+});

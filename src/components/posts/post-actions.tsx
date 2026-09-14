@@ -53,7 +53,7 @@ export function PostActions({ post }: { post: PostWithTargets }) {
             start(async () => {
               const r = await enqueueJob({ brandId: post.brand_id, type: "rewrite", input: { post_id: post.id } });
               if (r.ok) {
-                toast.success("Rewrite queued — see Jobs");
+                toast.success("Rewrite queued — see Jobs (MCP jobs run from your Claude session)");
                 router.push("/jobs");
               } else toast.error(r.error);
             })

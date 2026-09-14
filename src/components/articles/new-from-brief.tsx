@@ -12,14 +12,14 @@ import { enqueueJob } from "@/lib/jobs/actions";
 type Decision = "new" | "rewrite" | "optimize";
 type Runner = "in_app" | "mcp";
 
-export function NewFromBrief({ brandId }: { brandId: string }) {
+export function NewFromBrief({ brandId, defaultRunner }: { brandId: string; defaultRunner: Runner }) {
   const [open, setOpen] = useState(false);
   const [topic, setTopic] = useState("");
   const [primary, setPrimary] = useState("");
   const [secondary, setSecondary] = useState("");
   const [decision, setDecision] = useState<Decision>("new");
   const [notes, setNotes] = useState("");
-  const [runner, setRunner] = useState<Runner>("in_app");
+  const [runner, setRunner] = useState<Runner>(defaultRunner);
   const [pending, start] = useTransition();
   const router = useRouter();
 
@@ -38,7 +38,7 @@ export function NewFromBrief({ brandId }: { brandId: string }) {
         },
       });
       if (!r.ok) return void toast.error(r.error);
-      toast.success(runner === "mcp" ? "Queued for MCP — claim it from a Claude session" : "Writing article — see Jobs");
+      toast.success(runner === "mcp" ? "Queued — run it from your Claude session (see Jobs)" : "Writing article — see Jobs");
       setOpen(false);
       router.push("/jobs");
     });
@@ -80,8 +80,8 @@ export function NewFromBrief({ brandId }: { brandId: string }) {
               <div className="space-y-1">
                 <Label htmlFor="brief-runner">Runner</Label>
                 <select id="brief-runner" value={runner} onChange={(e) => setRunner(e.target.value as Runner)} className="w-full rounded-md border bg-background px-2 py-1.5 text-sm">
-                  <option value="in_app">In-app (Claude API)</option>
-                  <option value="mcp">Queue for MCP</option>
+                  <option value="mcp">MCP — your Claude account (free)</option>
+                  <option value="in_app">In-app — Anthropic API (paid)</option>
                 </select>
               </div>
             </div>

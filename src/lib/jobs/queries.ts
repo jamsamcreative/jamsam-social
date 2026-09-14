@@ -10,9 +10,9 @@ export async function listJobsForBrand(brandId: string): Promise<GenerationJob[]
   return data;
 }
 
-export async function getJobPublic(id: string): Promise<Pick<GenerationJob, "id" | "status" | "result" | "error" | "post_id" | "article_id"> | null> {
+export async function getJobPublic(id: string): Promise<Pick<GenerationJob, "id" | "status" | "runner" | "result" | "error" | "post_id" | "article_id"> | null> {
   const supabase = await createServerSupabase();
-  const { data } = await supabase.from("generation_jobs").select("id,status,result,error,post_id,article_id").eq("id", id).maybeSingle();
+  const { data } = await supabase.from("generation_jobs").select("id,status,runner,result,error,post_id,article_id").eq("id", id).maybeSingle();
   return data ?? null;
 }
 
