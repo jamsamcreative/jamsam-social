@@ -11,12 +11,30 @@ export function mapGa4Channels(rows: Ga4Row[]): MetricRow[] {
   return rows.map((r) => ({ source: "ga4_channel", date: ga4Date(r.dims[0]), dim: r.dims[1] || "(unknown)", metrics: { sessions: r.metrics[0] ?? 0, engaged_sessions: r.metrics[1] ?? 0, leads: sumFrom(r.metrics, 2) } }));
 }
 
-/** dims [date]; metrics [sessions, advertiserAdCost, advertiserAdClicks, keyEvents:a, …] */
+/**
+ * dims [date]; metrics [sessions, keyEvents:a, …]. GA4 refuses advertiserAd* metrics without a Google Ads dimension in the
+ * same request, so Ads cost/clicks are folded in from the campaign report by `withAdsTotals`.
+ */
 export function mapGa4Totals(rows: Ga4Row[]): MetricRow[] {
   return rows.map((r) => ({
     source: "ga4_total", date: ga4Date(r.dims[0]), dim: TOTAL_DIM,
-    metrics: { sessions: r.metrics[0] ?? 0, google_ads_cost: r.metrics[1] ?? 0, google_ads_clicks: r.metrics[2] ?? 0, leads: sumFrom(r.metrics, 3) },
+    metrics: { sessions: r.metrics[0] ?? 0, google_ads_cost: 0, google_ads_clicks: 0, leads: sumFrom(r.metrics, 1) },
   }));
+}
+
+/** Adds per-day Google Ads cost/clicks (summed over campaigns) onto the matching ga4_total rows. */
+export function withAdsTotals(totals: MetricRow[], campaigns: MetricRow[]): MetricRow[] {
+  const byDate = new Map<string, { cost: number; clicks: number }>();
+  for (const c of campaigns) {
+    const cur = byDate.get(c.date) ?? { cost: 0, clicks: 0 };
+    cur.cost += c.metrics.cost ?? 0;
+    cur.clicks += c.metrics.clicks ?? 0;
+    byDate.set(c.date, cur);
+  }
+  return totals.map((t) => {
+    const a = byDate.get(t.date);
+    return a ? { ...t, metrics: { ...t.metrics, google_ads_cost: a.cost, google_ads_clicks: a.clicks } } : t;
+  });
 }
 
 /** dims [date, sessionGoogleAdsCampaignName]; metrics [advertiserAdCost, advertiserAdClicks, advertiserAdImpressions, sessions, keyEvents:a, …]. Drops unattributed/zero-spend rows. */

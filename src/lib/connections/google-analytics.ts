@@ -45,8 +45,9 @@ export const googleAnalytics: ConnectionProvider<Ga4Config, Record<string, never
       const sessions = r.rows[0]?.metrics[0] ?? 0;
       let ads_linked = false;
       try {
-        const a = await ga4RunReport(config.property_id, { dateRanges: [{ startDate: "30daysAgo", endDate: day }], metrics: [{ name: "advertiserAdCost" }] }, deps);
-        ads_linked = (a.rows[0]?.metrics[0] ?? 0) > 0;
+        // advertiserAd* metrics need a Google Ads dimension in the same request.
+        const a = await ga4RunReport(config.property_id, { dateRanges: [{ startDate: "30daysAgo", endDate: day }], dimensions: [{ name: "sessionGoogleAdsCampaignName" }], metrics: [{ name: "advertiserAdCost" }] }, deps);
+        ads_linked = a.rows.some((r) => (r.metrics[0] ?? 0) > 0);
       } catch {
         ads_linked = false;
       }

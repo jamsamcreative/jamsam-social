@@ -1,5 +1,5 @@
 import { syncWindow, chunkWindow, type Window } from "./ranges";
-import { mapGa4Channels, mapGa4Totals, mapGa4Campaigns, mapGsc, mapMetaCampaigns, mapMetaTotals } from "./mappers";
+import { mapGa4Channels, mapGa4Totals, mapGa4Campaigns, withAdsTotals, mapGsc, mapMetaCampaigns, mapMetaTotals } from "./mappers";
 import type { MetricRow } from "./types";
 import type { Ga4Row, Ga4ReportBody } from "@/lib/google/ga4";
 import type { GscRow, GscQueryBody } from "@/lib/google/gsc";
@@ -34,17 +34,18 @@ async function syncGa4(brandId: string, c: NonNullable<BrandMetricConnections["g
     const ke = keyEventMetrics(c.lead_events);
     const [channels, totals] = await Promise.all([
       client.runReport(c.property_id, { dateRanges, dimensions: [{ name: "date" }, { name: "sessionDefaultChannelGroup" }], metrics: [{ name: "sessions" }, { name: "engagedSessions" }, ...ke] }),
-      client.runReport(c.property_id, { dateRanges, dimensions: [{ name: "date" }], metrics: [{ name: "sessions" }, { name: "advertiserAdCost" }, { name: "advertiserAdClicks" }, ...ke] }),
+      client.runReport(c.property_id, { dateRanges, dimensions: [{ name: "date" }], metrics: [{ name: "sessions" }, ...ke] }),
     ]);
-    out.push(...mapGa4Channels(channels.rows), ...mapGa4Totals(totals.rows));
+    let campaigns: MetricRow[] = [];
     if (c.ads_linked) {
       const camp = await client.runReport(c.property_id, {
         dateRanges,
         dimensions: [{ name: "date" }, { name: "sessionGoogleAdsCampaignName" }],
         metrics: [{ name: "advertiserAdCost" }, { name: "advertiserAdClicks" }, { name: "advertiserAdImpressions" }, { name: "sessions" }, ...ke],
       });
-      out.push(...mapGa4Campaigns(camp.rows));
+      campaigns = mapGa4Campaigns(camp.rows);
     }
+    out.push(...mapGa4Channels(channels.rows), ...withAdsTotals(mapGa4Totals(totals.rows), campaigns), ...campaigns);
   }
   return out;
 }

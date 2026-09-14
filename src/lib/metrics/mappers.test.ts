@@ -1,12 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { mapGa4Channels, mapGa4Totals, mapGa4Campaigns, mapGsc, mapMetaCampaigns, mapMetaTotals } from "@/lib/metrics/mappers";
+import { mapGa4Channels, mapGa4Totals, mapGa4Campaigns, withAdsTotals, mapGsc, mapMetaCampaigns, mapMetaTotals } from "@/lib/metrics/mappers";
 
 describe("mappers", () => {
   it("GA4 channels: sums key events into leads and formats the date", () => {
     expect(mapGa4Channels([{ dims: ["20260901", "Organic Search"], metrics: [100, 60, 2, 1] }])).toEqual([{ source: "ga4_channel", date: "2026-09-01", dim: "Organic Search", metrics: { sessions: 100, engaged_sessions: 60, leads: 3 } }]);
   });
-  it("GA4 totals carry Google Ads cost/clicks and leads", () => {
-    expect(mapGa4Totals([{ dims: ["20260901"], metrics: [500, 120.5, 300, 4] }])[0].metrics).toEqual({ sessions: 500, google_ads_cost: 120.5, google_ads_clicks: 300, leads: 4 });
+  it("GA4 totals carry sessions and leads; Ads cost/clicks are folded in from campaigns", () => {
+    const totals = mapGa4Totals([{ dims: ["20260901"], metrics: [500, 3, 1] }]);
+    expect(totals[0].metrics).toEqual({ sessions: 500, google_ads_cost: 0, google_ads_clicks: 0, leads: 4 });
+    const camps = mapGa4Campaigns([{ dims: ["20260901", "A"], metrics: [100, 40, 900, 30, 1] }, { dims: ["20260901", "B"], metrics: [20.5, 10, 100, 8, 0] }]);
+    expect(withAdsTotals(totals, camps)[0].metrics).toEqual({ sessions: 500, google_ads_cost: 120.5, google_ads_clicks: 50, leads: 4 });
   });
   it("GA4 campaigns drop (not set) and zero-cost rows", () => {
     const rows = mapGa4Campaigns([{ dims: ["20260901", "Metal Roofing"], metrics: [50, 20, 900, 18, 1] }, { dims: ["20260901", "(not set)"], metrics: [10, 1, 1, 1, 0] }, { dims: ["20260901", "Organic thing"], metrics: [0, 5, 0, 5, 0] }]);
