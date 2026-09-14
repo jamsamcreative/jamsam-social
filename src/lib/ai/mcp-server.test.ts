@@ -38,6 +38,14 @@ describe("MCP server", () => {
     expect(r.isError).toBe(true);
     expect((r.content as { text: string }[])[0].text).toMatch(/Unknown brand/);
   });
+  it("accepts an OAuth access token and advertises resource metadata on 401", async () => {
+    const verifyOauth = async (t: string) => (t === "issued-token" ? { user_id: "u1", client_id: "c1" } : null);
+    const ok = await handleMcpRequest(new Request("http://app.test/api/mcp", { method: "GET", headers: { Authorization: "Bearer issued-token" } }), { store: fakeStore(), token: TOKEN, verifyOauth });
+    expect(ok.status).toBe(405); // authenticated, then rejected only for the method
+    const no = await handleMcpRequest(new Request("http://app.test/api/mcp", { method: "POST", body: "{}", headers: { Authorization: "Bearer bogus" } }), { store: fakeStore(), token: TOKEN, origin: "http://app.test/", verifyOauth });
+    expect(no.status).toBe(401);
+    expect(no.headers.get("www-authenticate")).toContain('resource_metadata="http://app.test/.well-known/oauth-protected-resource"');
+  });
   it("GET is 405", async () => {
     const res = await handleMcpRequest(new Request("http://app.test/api/mcp", { method: "GET", headers: { Authorization: `Bearer ${TOKEN}` } }), { store: fakeStore(), token: TOKEN });
     expect(res.status).toBe(405);

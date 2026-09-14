@@ -50,6 +50,15 @@ type GenerationJobRow = {
   attempts: number; model: string | null; input_tokens: number | null; output_tokens: number | null;
   created_by: string | null; created_at: string; updated_at: string;
 };
+type OauthClientRow = { id: string; client_id: string; client_name: string | null; redirect_uris: string[]; created_at: string };
+type OauthCodeRow = {
+  code_hash: string; client_id: string; user_id: string; redirect_uri: string; code_challenge: string; scope: string | null; resource: string | null;
+  expires_at: string; used_at: string | null; created_at: string;
+};
+type OauthTokenRow = {
+  id: string; client_id: string; user_id: string; access_token_hash: string; refresh_token_hash: string; scope: string | null;
+  access_expires_at: string; refresh_expires_at: string; revoked_at: string | null; last_used_at: string | null; created_at: string;
+};
 type PostCategoryRow = {
   id: string; brand_id: string; name: string; slug: string; target_share: number; description: string | null;
   sort_order: number; created_at: string;
@@ -75,6 +84,9 @@ export type Database = {
       article_media_map: Table<ArticleMediaMapRow, "brand_id" | "source_url" | "wp_media_id" | "wp_url">;
       generation_jobs: Table<GenerationJobRow, "brand_id" | "type" | "input">;
       post_categories: Table<PostCategoryRow, "brand_id" | "name" | "slug" | "target_share">;
+      oauth_clients: Table<OauthClientRow, "client_id" | "redirect_uris">;
+      oauth_codes: Table<OauthCodeRow, "code_hash" | "client_id" | "user_id" | "redirect_uri" | "code_challenge" | "expires_at">;
+      oauth_tokens: Table<OauthTokenRow, "client_id" | "user_id" | "access_token_hash" | "refresh_token_hash" | "access_expires_at" | "refresh_expires_at">;
     };
     Views: Record<string, never>;
     Functions: {
