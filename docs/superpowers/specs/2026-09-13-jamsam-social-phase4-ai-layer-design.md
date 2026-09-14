@@ -89,7 +89,7 @@ For a brand: take the most recent 20 posts with status `approved`, `publishing`,
 
 ### Settings and env
 
-- `app_settings.ai_model` (default `claude-sonnet-5`), editable in Settings.
+- `app_settings.ai_model` (default `claude-opus-5`; `claude-sonnet-5` selectable), editable in Settings.
 - Env: `ANTHROPIC_API_KEY`, `MCP_TOKEN` (≥ 32 random bytes, base64). Both set in Vercel; `.env.local` for dev.
 
 ## Shared tool layer — `src/lib/ai/tools/`
@@ -153,7 +153,7 @@ Hard rules enforced in `run()` (not just prompts): `create_post` and `submit_cap
 - **Jobs page** `/jobs` (sidebar): table for the current brand — type, status badge, runner, created, duration, tokens, error (truncated, full in a popover), link to the post/article, Retry (failed), Cancel (queued → failed "cancelled"). Auto-refreshes every 5s while any job is queued/running.
 - **Dashboard**: tile with running / failed counts (link to Jobs).
 - **Brand → Content mix tab**: table of categories (name, slug auto, target %, description, order) with add/edit/delete; validation that targets sum ≤ 100%; a bar per category showing actual vs target from `get_content_mix`.
-- **Settings** (new top-level page, also home for future app-wide settings): AI model select (`claude-sonnet-5`, `claude-opus-5`), MCP connection card, key-present indicators for `ANTHROPIC_API_KEY` / `MCP_TOKEN`.
+- **Settings** (new top-level page, also home for future app-wide settings): AI model select (`claude-opus-5` default, `claude-sonnet-5`), MCP connection card, key-present indicators for `ANTHROPIC_API_KEY` / `MCP_TOKEN`.
 
 ## Prompts
 
