@@ -1,5 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import Link from "next/link";
+import { enqueueJob } from "@/lib/jobs/actions";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -8,11 +10,24 @@ import type { ProjectRow } from "@/lib/seo/queries";
 
 const sel = "rounded-md border bg-background px-2 py-1 text-sm";
 
-export function ContentBank({ rows, categories, states }: { rows: ProjectRow[]; categories: string[]; states: string[] }) {
+export function ContentBank({ brandId, rows, categories, states }: { brandId: string; rows: ProjectRow[]; categories: string[]; states: string[] }) {
   const router = useRouter();
   const sp = useSearchParams();
   const [q, setQ] = useState(sp.get("q") ?? "");
   const [open, setOpen] = useState<ProjectRow | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [queueing, startQueue] = useTransition();
+  const toggle = (id: string) => setSelected((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const queuePins = () => startQueue(async () => {
+    let ok = 0;
+    for (const id of selected) {
+      const r = await enqueueJob({ brandId, type: "pin", input: { project_id: id } });
+      if (r.ok) ok++; else toast.error(r.error);
+    }
+    if (ok) toast.success(`Queued ${ok} pin job${ok === 1 ? "" : "s"}`);
+    setSelected(new Set());
+    router.push("/jobs");
+  });
   const go = (patch: Record<string, string>) => {
     const u = new URLSearchParams(sp.toString());
     u.set("tab", "bank");
@@ -33,6 +48,9 @@ export function ContentBank({ rows, categories, states }: { rows: ProjectRow[]; 
         <select className={sel} value={sp.get("category") ?? ""} onChange={(e) => go({ category: e.target.value })} aria-label="Category"><option value="">All categories</option>{categories.map((c) => <option key={c} value={c}>{c}</option>)}</select>
         <select className={sel} value={sp.get("state") ?? ""} onChange={(e) => go({ state: e.target.value })} aria-label="State"><option value="">All states</option>{states.map((s) => <option key={s} value={s}>{s}</option>)}</select>
         <Button type="submit" size="sm" variant="outline">Search</Button>
+        {selected.size > 0 && (
+          <Button type="button" size="sm" disabled={queueing} onClick={queuePins}>{queueing ? "Queueing…" : `Queue pin jobs for ${selected.size} selected`}</Button>
+        )}
       </form>
       {rows.length === 0 ? (
         <p className="rounded-lg border p-4 text-sm text-muted-foreground">No projects yet. Import a CSV or crawl a sitemap section on the Imports tab.</p>
@@ -41,14 +59,19 @@ export function ContentBank({ rows, categories, states }: { rows: ProjectRow[]; 
           {rows.map((p) => {
             const img = (p.images as { url: string; alt?: string }[])[0];
             return (
-              <button type="button" key={p.id} onClick={() => setOpen(p)} className="overflow-hidden rounded-lg border text-left hover:bg-muted/40">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {img ? <img src={img.url} alt={img.alt ?? ""} className="h-36 w-full object-cover" /> : <div className="h-36 w-full bg-muted" />}
-                <div className="space-y-0.5 p-3">
-                  <p className="truncate text-sm font-medium">{p.title}</p>
-                  <p className="text-xs text-muted-foreground">{[p.dims, p.category, p.location ?? p.state].filter(Boolean).join(" · ") || "—"}</p>
-                </div>
-              </button>
+              <div key={p.id} className="relative overflow-hidden rounded-lg border hover:bg-muted/40">
+                <label className="absolute left-2 top-2 z-10 flex items-center rounded bg-background/90 p-1">
+                  <input type="checkbox" aria-label={`Select ${p.title}`} checked={selected.has(p.id)} onChange={() => toggle(p.id)} />
+                </label>
+                <button type="button" onClick={() => setOpen(p)} className="w-full text-left">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {img ? <img src={img.url} alt={img.alt ?? ""} className="h-36 w-full object-cover" /> : <div className="h-36 w-full bg-muted" />}
+                  <div className="space-y-0.5 p-3">
+                    <p className="truncate text-sm font-medium">{p.title}</p>
+                    <p className="text-xs text-muted-foreground">{[p.dims, p.category, p.location ?? p.state].filter(Boolean).join(" · ") || "—"}</p>
+                  </div>
+                </button>
+              </div>
             );
           })}
         </div>
@@ -71,6 +94,7 @@ export function ContentBank({ rows, categories, states }: { rows: ProjectRow[]; 
             </div>
             <div className="mt-4 flex gap-2">
               <Button size="sm" onClick={() => copyFacts(open)}>Copy facts for a post</Button>
+              <Button size="sm" variant="outline" nativeButton={false} render={<Link href={`/pins/new?project=${open.id}`} />}>Write a pin</Button>
             </div>
           </div>
         </div>

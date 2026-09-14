@@ -2,6 +2,7 @@ import Link from "next/link";
 import { listBrands } from "@/lib/brands/queries";
 import { getCurrentBrandSlug } from "@/lib/current-brand";
 import { listTargetsInRange } from "@/lib/posts/queries";
+import { listPinsInRange } from "@/lib/pins/queries";
 import { monthGrid, dayKeyInZone, addMonths } from "@/lib/calendar/grid";
 import { zonedLocalToUtc, utcToZonedLocal } from "@/lib/time/zoned";
 import { MonthGrid, type Chip } from "@/components/calendar/month-grid";
@@ -33,8 +34,14 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   lastDay.setUTCDate(1 - lastDay.getUTCDay() + 42);
   const toIso = zonedLocalToUtc(`${lastDay.toISOString().slice(0, 10)}T00:00`, tz);
 
-  const targets = await listTargetsInRange(brand.id, fromIso, toIso);
+  const [targets, pins] = await Promise.all([listTargetsInRange(brand.id, fromIso, toIso), listPinsInRange(brand.id, fromIso, toIso)]);
   const chipsByDay: Record<string, Chip[]> = {};
+  for (const p of pins) {
+    if (!p.scheduled_at) continue;
+    const day = dayKeyInZone(p.scheduled_at, tz);
+    const status = p.status === "published" ? "published" : p.status === "failed" ? "failed" : p.status === "publishing" ? "publishing" : "pending";
+    (chipsByDay[day] ??= []).push({ id: p.id, post_id: p.id, title: p.title, platform: "pinterest", status, scheduled_at: p.scheduled_at, movable: ["draft", "pending_approval", "approved", "failed"].includes(p.status), href: `/pins/${p.id}` });
+  }
   for (const t of targets) {
     if (!t.scheduled_at) continue;
     const day = dayKeyInZone(t.scheduled_at, tz);

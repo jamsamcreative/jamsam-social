@@ -31,6 +31,26 @@ export function ContentSocial({ vm }: { vm: ContentSocialVM }) {
         </table>
       </div>
       <div className="space-y-2 rounded-lg border p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pinterest</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Stat label="Pins published" value={fmtInt(vm.pins.published)} />
+          <Stat label="Typical pin impressions" value={fmtInt(vm.pins.medianImpressions)} sub="median per pin, lifetime" />
+        </div>
+        {vm.pins.top.length > 0 && (
+          <table className="w-full text-sm">
+            <thead><tr><th className={th}>Pin</th><th className={th}>Impressions</th><th className={th}>Saves</th><th className={th}>Published</th></tr></thead>
+            <tbody>
+              {vm.pins.top.map((p) => (
+                <tr key={p.id} className="border-t">
+                  <td className={td}><Link href={`/pins/${p.id}`} className="underline">{p.title}</Link>{p.url && <a href={p.url} target="_blank" rel="noreferrer" className="ml-2 text-xs text-muted-foreground underline">view</a>}</td>
+                  <td className={`${td} tabular-nums`}>{fmtInt(p.impressions)}</td><td className={`${td} tabular-nums`}>{fmtInt(p.saves)}</td><td className={td}>{new Date(p.published_at).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      <div className="space-y-2 rounded-lg border p-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Articles published</p>
         {vm.articlesPublished.length === 0 ? <p className="text-sm text-muted-foreground">No articles published in this range.</p> : (
           <ul className="space-y-1 text-sm">
