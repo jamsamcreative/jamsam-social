@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
-import { AI_MODELS } from "./models";
+import { AI_MODELS, RUNNERS } from "./models";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -16,5 +16,18 @@ export async function setAiModel(model: string): Promise<ActionResult> {
   const { error } = await createAdminSupabase().from("app_settings").upsert({ key: "ai_model", value: model });
   if (error) return { ok: false, error: error.message };
   revalidatePath("/settings");
+  return { ok: true };
+}
+
+export async function setDefaultRunner(runner: string): Promise<ActionResult> {
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not signed in" };
+  if (!(RUNNERS as readonly string[]).includes(runner)) return { ok: false, error: "Unknown runner" };
+  const { error } = await createAdminSupabase().from("app_settings").upsert({ key: "default_runner", value: runner });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/", "layout");
   return { ok: true };
 }

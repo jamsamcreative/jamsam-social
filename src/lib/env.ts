@@ -13,7 +13,7 @@ const schema = z.object({
   META_APP_ID: z.string().min(1),
   META_APP_SECRET: z.string().min(1),
   CRON_SECRET: z.string().min(16, "CRON_SECRET must be at least 16 chars (openssl rand -hex 32)"),
-  ANTHROPIC_API_KEY: z.string().min(1, "ANTHROPIC_API_KEY is required"),
+  ANTHROPIC_API_KEY: z.string().min(1).optional(), // only needed for the in-app (API) runner
   MCP_TOKEN: z.string().min(32, "MCP_TOKEN must be at least 32 chars (openssl rand -base64 32)"),
 });
 

@@ -126,6 +126,12 @@ export async function runJobWith(jobId: string, deps: RunnerDeps): Promise<"comp
 /** Production entry point: real store + Anthropic client, model from app_settings. Never throws. */
 export async function runJob(jobId: string): Promise<void> {
   const store = createSupabaseStore();
+  if (!env.ANTHROPIC_API_KEY) {
+    await store
+      .transitionJob(jobId, ["queued"], { status: "failed", error: "No ANTHROPIC_API_KEY configured. Set the default runner to MCP in Settings, or add the key to run jobs in-app.", finished_at: new Date().toISOString() })
+      .catch(() => {});
+    return;
+  }
   const model = (await store.getSetting("ai_model")) ?? DEFAULT_MODEL;
   const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
   try {
