@@ -22,6 +22,7 @@ export type MediaItem = { url: string; alt?: string | null; media_asset_id?: str
 type PostRow = {
   id: string; brand_id: string; title: string; link_url: string | null; media: Json;
   source: "manual" | "recycled" | "ai"; recycled_from: string | null; category_id: string | null;
+  project_id: string | null; plan: Json | null;
   status: "draft" | "pending_approval" | "approved" | "publishing" | "published" | "failed" | "archived";
   created_by: string | null; approved_by: string | null; approved_at: string | null; created_at: string; updated_at: string;
 };
@@ -87,6 +88,17 @@ type PinRow = {
   claimed_at: string | null; insights: Json | null; insights_fetched_at: string | null; created_by: string | null; approved_by: string | null; approved_at: string | null;
   created_at: string; updated_at: string;
 };
+type BrandScheduleRow = {
+  brand_id: string; slots: Json; recycle_cap: number; rest_days_min: number; rest_days_max: number;
+  history_synced_at: string | null; history_cursor: Json | null; updated_at: string;
+};
+type SocialHistoryRow = {
+  id: string; brand_id: string; platform: "facebook" | "instagram" | "gbp"; external_id: string; published_at: string; caption: string; media: Json;
+  permalink: string | null; likes: number; comments: number; shares: number; reach: number | null; interactions: number; post_id: string | null; fetched_at: string;
+};
+type PlanWeekRow = {
+  brand_id: string; week_start: string; built_at: string; built_by: string; timing_source: string; skipped: Json; summary: Json;
+};
 type PostCategoryRow = {
   id: string; brand_id: string; name: string; slug: string; target_share: number; description: string | null;
   sort_order: number; created_at: string;
@@ -106,6 +118,9 @@ export type Database = {
       brand_guidelines: Table<GuidelineRow, "brand_id" | "kind">;
       media_assets: Table<MediaRow, "brand_id" | "storage_path" | "public_url" | "filename" | "mime_type">;
       posts: Table<PostRow, "brand_id" | "title">;
+      brand_schedules: Table<BrandScheduleRow, "brand_id">;
+      social_history: Table<SocialHistoryRow, "brand_id" | "platform" | "external_id" | "published_at">;
+      plan_weeks: Table<PlanWeekRow, "brand_id" | "week_start" | "built_by" | "timing_source" | "summary">;
       post_targets: Table<PostTargetRow, "post_id" | "platform">;
       app_settings: Table<AppSettingRow, "key" | "value">;
       articles: Table<ArticleRow, "brand_id" | "title" | "slug">;
