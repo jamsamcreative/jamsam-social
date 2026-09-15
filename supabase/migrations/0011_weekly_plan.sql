@@ -11,6 +11,7 @@ create table brand_schedules (
   history_cursor     jsonb,                                -- {facebook: next_url|null, instagram: next_url|null}
   updated_at         timestamptz not null default now()
 );
+create trigger brand_schedules_updated_at before update on brand_schedules for each row execute function set_updated_at();
 
 create table social_history (
   id            uuid primary key default gen_random_uuid(),
