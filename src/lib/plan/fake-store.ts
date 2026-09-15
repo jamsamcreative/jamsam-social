@@ -12,12 +12,13 @@ export type FakePlanStore = PlanStore & {
   history: HistoryRow[];
   cursor: Record<string, string | null>;
   schedule: BrandSchedule | null;
+  runs: { brand_id: string; ok: boolean; error?: string }[];
 };
 
 export function fakePlanStore(seed: { schedule?: BrandSchedule | null; history?: HistoryRow[]; projects?: ProjectLike[]; articles?: ArticleLike[]; usage?: Partial<Awaited<ReturnType<PlanStore["listUsage"]>>>; favourCategory?: string | null } = {}): FakePlanStore {
   let n = 0;
   const store: FakePlanStore = {
-    posts: [], jobs: [], weeks: [], history: seed.history ?? [], cursor: {}, schedule: seed.schedule ?? null,
+    posts: [], jobs: [], weeks: [], history: seed.history ?? [], cursor: {}, schedule: seed.schedule ?? null, runs: [],
     async listActiveBrands() { return [BRAND]; },
     async getBrand(id) { return id === BRAND.id ? BRAND : null; },
     async getSchedule() { return store.schedule; },
@@ -64,6 +65,7 @@ export function fakePlanStore(seed: { schedule?: BrandSchedule | null; history?:
     },
     async addSkipped(_b, weekStart, id) { const w = store.weeks.find((x) => x.week_start === weekStart); if (w && !w.skipped.includes(id)) w.skipped.push(id); },
     async listPlanWeeks() { return store.weeks.map((w) => w.week_start).sort().reverse(); },
+    async recordPlanRun(brand_id, ok, error) { store.runs.push({ brand_id, ok, error }); },
   };
   return store;
 }

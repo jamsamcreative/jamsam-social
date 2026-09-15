@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { fakePlanStore, BRAND } from "./fake-store";
 import { runPlanCycle } from "./cron";
 import type { BrandSchedule } from "./types";
@@ -14,13 +14,27 @@ describe("runPlanCycle", () => {
     expect(store.posts[0]).toMatchObject({ status: "draft", plan: { week_start: "2026-09-21" } });
     const second = await runPlanCycle(store, now);
     expect(second).toEqual({ built: [], skipped: [`${BRAND.slug}:2026-09-21`], failed: [] });
+    // One sync_runs row per build; a skipped week does not record a run
+    expect(store.runs).toEqual([{ brand_id: BRAND.id, ok: true, error: undefined }]);
   });
-  it("records a per-brand failure instead of throwing when the build blows up", async () => {
+  it("records a per-brand failure in sync_runs and the console instead of throwing when the build blows up", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const store = fakePlanStore({ schedule });
     store.listProjects = async () => { throw new Error("projects table unavailable"); };
     await expect(runPlanCycle(store, new Date("2026-09-14T13:00:00Z"))).resolves.toEqual({ built: [], skipped: [], failed: [{ brand: BRAND.slug, error: "projects table unavailable" }] });
     expect(store.posts).toEqual([]);
     expect(store.weeks).toEqual([]);
+    expect(store.runs).toEqual([{ brand_id: BRAND.id, ok: false, error: "projects table unavailable" }]);
+    expect(error).toHaveBeenCalledWith(expect.stringMatching(/acme.*projects table unavailable/));
+    error.mockRestore();
+  });
+  it("still reports the failure when recording the run itself fails", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const store = fakePlanStore({ schedule });
+    store.listProjects = async () => { throw new Error("boom"); };
+    store.recordPlanRun = async () => { throw new Error("sync_runs unavailable"); };
+    await expect(runPlanCycle(store, new Date("2026-09-14T13:00:00Z"))).resolves.toEqual({ built: [], skipped: [], failed: [{ brand: BRAND.slug, error: "boom" }] });
+    error.mockRestore();
   });
   it("skips brands without a schedule", async () => {
     const store = fakePlanStore({ schedule: null });

@@ -43,6 +43,8 @@ export interface PlanStore {
   upsertPlanWeek(week: Omit<PlanWeek, "built_at">): Promise<void>;
   addSkipped(brandId: string, weekStart: string, candidateId: string): Promise<void>;
   listPlanWeeks(brandId: string): Promise<string[]>;
+  /** Records the Monday cron's outcome for a brand in `sync_runs` (source 'plan') so a failed build is visible, not just a discarded response body. */
+  recordPlanRun(brandId: string, ok: boolean, error?: string): Promise<void>;
 }
 
 const fail = (e: { message: string }): never => { throw new Error(e.message); };
@@ -183,6 +185,12 @@ export function createSupabasePlanStore(): PlanStore {
     async listPlanWeeks(brandId) {
       const { data } = await admin.from("plan_weeks").select("week_start").eq("brand_id", brandId).order("week_start", { ascending: false });
       return (data ?? []).map((w) => w.week_start);
+    },
+    async recordPlanRun(brandId, ok, error) {
+      const now = new Date().toISOString();
+      const row = { brand_id: brandId, source: "plan", last_run_at: now, last_error: ok ? null : (error ?? "unknown error"), ...(ok ? { last_ok_at: now } : {}) };
+      const { error: e } = await admin.from("sync_runs").upsert(row, { onConflict: "brand_id,source" });
+      if (e) fail(e);
     },
   };
 }

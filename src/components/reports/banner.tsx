@@ -8,12 +8,13 @@ import { syncNow } from "@/lib/metrics/actions";
 import { fmtDate } from "@/lib/reports/format";
 import type { SyncRun } from "@/lib/metrics/queries";
 
-const LABEL: Record<string, string> = { ga4: "Google Analytics", gsc: "Search Console", meta_ads: "Meta Ads" };
+const LABEL: Record<string, string> = { ga4: "Google Analytics", gsc: "Search Console", meta_ads: "Meta Ads", plan: "Weekly plan" };
 
 export function SyncBanner({ brandId, slug, runs, connected }: { brandId: string; slug: string; runs: SyncRun[]; connected: number }) {
   const [pending, start] = useTransition();
   const router = useRouter();
-  const lastOk = runs.map((r) => r.last_ok_at).filter((x): x is string => Boolean(x)).sort().at(-1);
+  // The Monday plan cron also records itself here (source 'plan'); its errors are worth showing but it is not a marketing sync.
+  const lastOk = runs.filter((r) => r.source !== "plan").map((r) => r.last_ok_at).filter((x): x is string => Boolean(x)).sort().at(-1);
   const errors = runs.filter((r) => r.last_error);
   const sync = () =>
     start(async () => {
