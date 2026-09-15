@@ -4,12 +4,19 @@ import { getBrandBySlug } from "@/lib/brands/queries";
 import { setBrandActive } from "@/lib/brands/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { BrandNav } from "./brand-nav";
+import { createSupabasePlanStore } from "@/lib/plan/store";
+import { ScheduleForm } from "@/components/brands/schedule-form";
+import { ImportHistory } from "@/components/brands/import-history";
 
 export default async function BrandOverviewPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const brand = await getBrandBySlug(slug);
   if (!brand) notFound();
+
+  const store = createSupabasePlanStore();
+  const [schedule, history] = await Promise.all([store.getSchedule(brand.id), store.listHistory(brand.id)]);
 
   async function toggle() {
     "use server";
@@ -45,6 +52,13 @@ export default async function BrandOverviewPage({ params }: { params: Promise<{ 
         <dt className="text-muted-foreground">SEO suffix</dt>
         <dd className="col-span-2">{brand.seo_suffix ?? "Not set"}</dd>
       </dl>
+      <Card>
+        <CardHeader><CardTitle className="text-base">Posting schedule</CardTitle></CardHeader>
+        <CardContent className="space-y-6">
+          <ScheduleForm brandId={brand.id} schedule={schedule} sampleCount={history.filter((h) => h.interactions > 0 || h.reach !== null).length} />
+          <ImportHistory brandId={brand.id} syncedAt={schedule?.history_synced_at ?? null} rows={history.length} />
+        </CardContent>
+      </Card>
     </div>
   );
 }
