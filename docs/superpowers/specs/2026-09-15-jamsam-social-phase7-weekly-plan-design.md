@@ -6,9 +6,18 @@
 
 ## Purpose
 
-Build each brand's social week automatically so the app runs itself between approvals. The planner fills the brand's posting slots in priority order — new project pages, proven posts due for a re-run, promo posts for fresh articles, then filler chosen to keep the week balanced — writes them as ordinary draft posts with queued caption jobs, and lets a human approve a post, a day, or the whole week. Posting times start from a per-brand schedule and are refined from the brand's own measured engagement once there is enough of it. Past Facebook/Instagram posts are imported so the recycle pool, "on this day" and timing evidence exist from day one.
+Build each brand's social week automatically so the only human work is approving. The planner fills the brand's posting slots in priority order — new project pages, proven posts due for a re-run, promo posts for fresh articles, then filler chosen to keep the week balanced — writes them as ordinary draft posts with queued caption jobs, and lets a human approve a post, a day, or the whole week. Posting times start from a per-brand schedule and are refined from the brand's own measured engagement once there is enough of it. Past Facebook/Instagram posts are imported so the recycle pool, "on this day" and timing evidence exist from day one.
 
-Modelled on SSA Social's Plan page; nothing publishes without approval.
+Modelled on SSA Social's Plan page.
+
+## Approval guarantee (hard rule)
+
+The planner never publishes anything. It only creates a queue for a person to approve:
+
+- Every post the planner or its cron creates lands as `draft` (no caption yet) or `pending_approval` (recycles, promos). The planner, the cron, the caption/promo jobs and the Meta history import never set `status = 'approved'` and never write `approved_by` / `approved_at`.
+- The publisher cron picks up `approved` targets only (unchanged from Phase 2), so a planned post cannot go out until a signed-in user clicks Approve on it, on its day, or on its week.
+- Approve-day / approve-week are explicit clicks by a user; there is no setting that auto-approves, and none will be added in this phase.
+- Enforced in code by a unit test on `buildWeekForBrand` / `rebuildWeek` asserting no created post or target has an approved/publishing status, and by the e2e test checking that a freshly built week shows 0 approved until the user approves it.
 
 ## Decisions carried from brainstorming
 
@@ -17,7 +26,7 @@ Modelled on SSA Social's Plan page; nothing publishes without approval.
 - **History:** import each brand's past Facebook and Instagram posts from the Meta Graph API into `social_history`; nightly top-up.
 - **Trigger:** cron builds next week every Monday for every brand with a schedule; opening an unbuilt week in the UI offers *Build this week*. Captions for new-page/filler slots are written by Claude through the existing `caption` job.
 - **Architecture:** the planner is a pure, tested function; its output is materialised as normal `posts` + `post_targets`, so calendar, approvals, publisher, insights and MCP tools need no changes (approach A). No separate slots table.
-- **Approval:** unchanged model (`draft → pending_approval → approved`); the Plan page adds approve-day and approve-week, which only act on posts that already have captions.
+- **Approval:** unchanged model (`draft → pending_approval → approved`); the Plan page adds approve-day and approve-week, which only act on posts that already have captions. Nothing the planner creates is ever auto-approved or auto-published (see Approval guarantee).
 
 ## Out of scope
 
