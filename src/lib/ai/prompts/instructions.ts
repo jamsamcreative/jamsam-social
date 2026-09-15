@@ -10,6 +10,7 @@ export const INSTRUCTIONS: Record<JobType, string> = {
     "Write a Facebook caption and an Instagram caption for the post in `post` (title, link, images with alt text).",
     "Follow social_style and social_post_spec exactly. Match the tone of `recent_captions`.",
     "Pick the category from `content_mix.favour_next` unless the post clearly belongs elsewhere; pass it as category_slug.",
+    "If brief.plan.lane is 'recycle' keep the original hook; if 'new_page' lead with the build facts; 'filler' is an evergreen showcase.",
     "Finish by calling submit_captions exactly once with both captions. Do not call create_post.",
   ].join("\n"),
   article: [
@@ -25,6 +26,7 @@ export const INSTRUCTIONS: Record<JobType, string> = {
     "Write a short social post promoting `article` (title, excerpt, url, featured_media).",
     'Condense the article into a hook + 1–2 lines of value + CTA like "Read more here 👉 <url>". Use featured_media.url as the image and link_url = article.url.',
     "If job.input.scheduled_after is set, schedule both targets at or after it (ISO with the brand timezone offset).",
+    "If job.input.plan is set, pass it unchanged as create_post's `plan` so the post lands on the weekly plan.",
     "Finish by calling create_post exactly once with article_id = job.input.article_id.",
   ].join("\n"),
   seo_cluster: [

@@ -8,7 +8,12 @@ export const JOB_TYPES: JobType[] = ["caption", "article", "promo", "rewrite", "
 
 const uuid = z.string().uuid();
 
-export const captionInputSchema = z.object({ post_id: uuid });
+const lane = z.enum(["new_page", "recycle", "promo", "filler"]);
+/** Weekly Plan metadata carried on a planned post (`posts.plan`) and through promo jobs to `create_post`. */
+export const planMetaSchema = z.object({ week_start: z.string(), lane, reason: z.string(), candidate_id: z.string(), touched: z.boolean().default(false) });
+export type PlanMeta = z.infer<typeof planMetaSchema>;
+
+export const captionInputSchema = z.object({ post_id: uuid, plan: z.object({ lane, reason: z.string() }).optional() });
 export const articleInputSchema = z.object({
   topic: z.string().trim().min(3).max(300),
   primary_keyword: z.string().trim().min(1).max(120).optional(),
@@ -16,7 +21,7 @@ export const articleInputSchema = z.object({
   decision: z.enum(["new", "rewrite", "optimize"]).default("new"),
   notes: z.string().trim().max(4000).optional(),
 });
-export const promoInputSchema = z.object({ article_id: uuid, scheduled_after: z.string().datetime({ offset: true }).optional() });
+export const promoInputSchema = z.object({ article_id: uuid, scheduled_after: z.string().datetime({ offset: true }).optional(), plan: planMetaSchema.optional() });
 export const rewriteInputSchema = z.object({ post_id: uuid });
 export const seoClusterInputSchema = z.object({ limit: z.number().int().min(1).max(300).default(300) });
 export const pinInputSchema = z

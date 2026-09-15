@@ -7,7 +7,7 @@ import { GUIDELINE_KINDS, type GuidelineKind } from "@/lib/guidelines/kinds";
 import { MIX_WINDOW, type CategoryLike } from "./content-mix";
 import { boardStats } from "@/lib/pins/rules";
 import type { Database, Json, MediaItem, TermRef } from "@/lib/database.types";
-import type { JobStatus, JobRunner } from "./schemas";
+import type { JobStatus, JobRunner, PlanMeta } from "./schemas";
 
 type ArticleStatus = Database["public"]["Enums"]["article_status"];
 type PostStatus = Database["public"]["Enums"]["post_status"];
@@ -22,6 +22,8 @@ export type PostSummary = { id: string; brand_id: string; title: string; link_ur
 export type CreatePostInput = {
   brand_id: string; title: string; link_url: string | null; media: MediaItem[]; category_id: string | null; source: "ai" | "recycled";
   recycled_from?: string | null; created_by?: string | null; targets: PostTargetSummary[];
+  /** Weekly Plan metadata when the post is materialised from a plan lane (promo jobs); null otherwise. */
+  plan?: PlanMeta | null;
 };
 export type CreateArticleInput = {
   brand_id: string; title: string; slug: string; content_html: string; excerpt: string | null; seo_title: string | null; meta_description: string | null;
@@ -203,6 +205,7 @@ export function createSupabaseStore(admin = createAdminSupabase()): Store {
         .insert({
           brand_id: input.brand_id, title: input.title, link_url: input.link_url, media: input.media as Json, category_id: input.category_id,
           source: input.source, recycled_from: input.recycled_from ?? null, status: "pending_approval", created_by: input.created_by ?? null,
+          plan: (input.plan ?? null) as Json,
         })
         .select("id")
         .single();
