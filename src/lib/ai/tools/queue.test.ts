@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { fakeStore, job } from "@/lib/ai/fake-store";
 import { listJobs, claimJob, completeJob } from "@/lib/ai/tools/queue";
 
@@ -40,6 +40,15 @@ describe("queue tools", () => {
       store.plans.set(postId, existing);
       await completeJob.run(ctx(store), { job_id: store.jobs[0].id, result: { post_id: postId } });
       expect(store.plans.get(postId)).toEqual(existing);
+    });
+    it("still completes the job when the backstop write fails", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const store = fakeStore({ jobs: [job({ runner: "mcp", status: "claimed", type: "promo", input: { article_id: "66666666-6666-4666-8666-666666666666", plan } })] });
+      store.setPostPlanIfMissing = vi.fn(async () => { throw new Error("db down"); });
+      await expect(completeJob.run(ctx(store), { job_id: store.jobs[0].id, result: { post_id: postId } })).resolves.toEqual({ ok: true, status: "completed" });
+      expect(store.jobs[0]).toMatchObject({ status: "completed", post_id: postId, error: null });
+      expect(warn).toHaveBeenCalledWith(expect.stringMatching(/db down/));
+      warn.mockRestore();
     });
     it("does nothing for jobs without a plan", async () => {
       const store = fakeStore({ jobs: [job({ runner: "mcp", status: "claimed", type: "promo", input: { article_id: "66666666-6666-4666-8666-666666666666" } })] });

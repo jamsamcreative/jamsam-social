@@ -38,6 +38,18 @@ describe("runJobWith", () => {
     expect(errorResult?.content).toMatch(/em dash/);
     expect((calls[0] as { system: string }).system).toMatch(/Be upbeat\./);
   });
+  it("keeps a promo job completed when the plan backstop write fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const article = { id: "66666666-6666-4666-8666-666666666666", brand_id: BRAND.id, title: "A", slug: "a", status: "published" as const, url: "https://acme.com/a", primary_keyword: null, wp_link: null, content_html: "<p>a</p>", excerpt: null, featured_media: null, published_at: "2026-09-01T00:00:00Z" };
+    const plan = { week_start: "2026-09-21", lane: "promo", reason: "New article", candidate_id: `article:${article.id}`, touched: false };
+    const store = fakeStore({ jobs: [job({ type: "promo", input: { article_id: article.id, plan } })], articles: [article] });
+    store.setPostPlanIfMissing = vi.fn(async () => { throw new Error("db down"); });
+    const { client } = fakeClient([{ tool: { name: "create_post", input: { brand: "acme", title: "Promo", targets: [{ platform: "facebook", caption: good }], media_urls: [], article_id: article.id } } }]);
+    expect(await runJobWith(store.jobs[0].id, { store, client, model: "m" })).toBe("completed");
+    expect(store.jobs[0]).toMatchObject({ status: "completed", error: null, result: { post_id: "11111111-1111-4111-8111-111111111111" } });
+    expect(store.setPostPlanIfMissing).toHaveBeenCalled();
+    warn.mockRestore();
+  });
   it("skips a job that is not queued", async () => {
     const store = fakeStore({ jobs: [job({ status: "completed" })] });
     const { client } = fakeClient([]);
