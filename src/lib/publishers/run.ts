@@ -8,6 +8,8 @@ import { publishToFacebook } from "./facebook";
 import { publishToInstagram } from "./instagram";
 import { publishToGbp } from "./gbp";
 import type { PublishInput, PublishResult } from "./types";
+import { mirrorPublishedTarget } from "@/lib/plan/history-sync";
+import { createSupabasePlanStore } from "@/lib/plan/store";
 
 type Target = Database["public"]["Tables"]["post_targets"]["Row"];
 type Post = Database["public"]["Tables"]["posts"]["Row"];
@@ -109,8 +111,16 @@ export async function runPublishCycle() {
     postIds.add(t.post_id);
     await admin.from("posts").update({ status: "publishing" }).eq("id", t.post_id).eq("status", "approved");
     const r = await processTarget(t, deps);
-    if (r === "published") counts.published++;
-    else if (r === "failed") counts.failed++;
+    if (r === "published") {
+      counts.published++;
+      if (t.platform === "facebook" || t.platform === "instagram") {
+        const { data: fresh } = await admin.from("post_targets").select("external_id,external_url,caption,published_at,post:posts(brand_id,media)").eq("id", t.id).maybeSingle();
+        const post = fresh?.post as unknown as { brand_id: string; media: { url: string }[] } | null;
+        if (fresh?.external_id && post) {
+          await mirrorPublishedTarget(createSupabasePlanStore(), { brandId: post.brand_id, postId: t.post_id, platform: t.platform, externalId: fresh.external_id, externalUrl: fresh.external_url, caption: fresh.caption, media: post.media ?? [], publishedAt: fresh.published_at ?? new Date().toISOString() }).catch(() => {});
+        }
+      }
+    } else if (r === "failed") counts.failed++;
     else counts.retried++;
   }
   for (const id of postIds) await syncPostStatus(id);
