@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { fakePlanStore, BRAND } from "./fake-store";
-import { importHistoryChunk, mirrorPublishedTarget } from "./history-sync";
+import { importHistoryChunk, mirrorPublishedTarget, topUpHistoryForAllBrands } from "./history-sync";
 
 const page = (ids: string[], next: string | null) => ({ data: ids.map((id) => ({ id, message: id, created_time: "2026-06-01T22:30:00+0000", likes: { summary: { total_count: 1 } }, comments: { summary: { total_count: 0 } } })), paging: next ? { next } : undefined });
 
@@ -22,6 +22,28 @@ describe("importHistoryChunk", () => {
   it("fails clearly without a Meta connection", async () => {
     const store = fakePlanStore();
     await expect(importHistoryChunk(store, { brandId: BRAND.id, platform: "facebook", connection: null })).rejects.toThrow(/Meta/);
+  });
+  it("topUp mode never reads or writes the backfill cursor", async () => {
+    const store = fakePlanStore();
+    store.cursor = { facebook: "https://graph.facebook.com/v21.0/p/posts?after=keep" };
+    const fetchImpl = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify(page(["9"], "https://graph.facebook.com/v21.0/p/posts?after=z")), { status: 200 }));
+    const conn = { config: { page_id: "p" }, secret: { page_access_token: "T" } };
+    const r = await importHistoryChunk(store, { brandId: BRAND.id, platform: "facebook", since: "2026-08-01", fetchImpl: fetchImpl as unknown as typeof fetch, connection: conn, topUp: true });
+    expect(r).toEqual({ imported: 1, done: false });
+    // No cursorUrl was passed, so fetchImpl must have been called against the base edge, not the stored cursor.
+    expect(fetchImpl.mock.calls[0][0].toString()).not.toContain("after=keep");
+    expect(store.cursor).toEqual({ facebook: "https://graph.facebook.com/v21.0/p/posts?after=keep" });
+  });
+});
+
+describe("topUpHistoryForAllBrands", () => {
+  it("isolates a brand with no Meta connection: no throw, no cursor touched, not counted", async () => {
+    const store = fakePlanStore();
+    store.cursor = { facebook: "https://graph.facebook.com/v21.0/p/posts?after=keep" };
+    const getConnection = async () => null;
+    const result = await topUpHistoryForAllBrands(store, getConnection);
+    expect(result).toEqual({ brands: 0, imported: 0 });
+    expect(store.cursor).toEqual({ facebook: "https://graph.facebook.com/v21.0/p/posts?after=keep" });
   });
 });
 
