@@ -37,7 +37,7 @@ export const FIELDS: Record<Provider, Field[]> = {
   semrush: [
     { name: "database", label: "Database", placeholder: "us" },
     { name: "competitors", label: "Competitor domains (comma separated, up to 5)", placeholder: "dcbuilding.com, mqsbarn.com", help: "Used for the keyword gap refresh on the SEO page." },
-    { name: "api_key", label: "API key", secret: true, help: "Leave blank to keep the saved one." },
+    { name: "api_key", label: "API key", secret: true, help: "Needs a Business plan with API units (v3 Analytics API key). On Pro/Guru, ask Claude to pull SEMrush data with the import_keywords tool instead. Leave blank to keep the saved one." },
   ],
   google_analytics: [{ name: "property_id", label: "GA4 property ID", placeholder: "450532525", help: "Numeric ID from GA4 → Admin → Property settings. Google Ads spend appears automatically when the Ads account is linked to this property." }],
   search_console: [{ name: "site_url", label: "Search Console property", placeholder: "sc-domain:client.com", help: "Domain property: sc-domain:client.com. URL-prefix property: https://client.com/ (with trailing slash)." }],

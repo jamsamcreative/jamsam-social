@@ -71,4 +71,40 @@ export const assignClusters = defineTool({
   },
 });
 
-export const SEO_TOOLS = [listKeywordOpportunities, checkCannibalizationTool, searchSitePages, searchProjects, assignClusters];
+const cleanDomain = (d: string) => d.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
+
+export const importKeywords = defineTool({
+  name: "import_keywords",
+  description: "Import or refresh keyword research for a brand (same shape as the SEO page's CSV import; merges by keyword and keeps Search Console data). Use this to feed SEMrush data pulled through the SEMrush connector on plans without API access: run `phrase_these` (export_columns keyword, volume, keyword_difficulty, intent) for volume/KD/intent, or `domain_domains` for the competitor keyword gap, then pass the rows here with source=semrush. Returns { imported, skipped }.",
+  input: z.object({
+    brand,
+    source: z.enum(["semrush", "manual"]).default("semrush").describe("semrush = pulled from SEMrush (counts as a data refresh); manual = your own list"),
+    keywords: z.array(z.object({
+      keyword: z.string().min(1),
+      cluster: z.string().max(60).optional(),
+      volume: z.number().int().nonnegative().optional().describe("Monthly search volume"),
+      difficulty: z.number().min(0).max(100).optional().describe("Keyword difficulty 0-100"),
+      intent: z.string().optional().describe("Informational / Commercial / Navigational / Transactional"),
+      competitor: z.string().optional().describe("Best-ranking competitor domain"),
+      competitor_position: z.number().int().positive().optional(),
+      our_position: z.number().int().positive().optional(),
+    })).min(1).max(500),
+  }),
+  run: async (ctx, { brand: slug, source, keywords }) => {
+    const b = await requireBrand(ctx, slug);
+    const rows = new Map<string, (typeof keywords)[number] & { source: typeof source }>();
+    let skipped = 0;
+    for (const k of keywords) {
+      const keyword = normaliseKeyword(k.keyword);
+      if (!keyword) { skipped++; continue; }
+      if (rows.has(keyword)) skipped++; // last occurrence wins, as in the CSV import
+      rows.set(keyword, { ...k, keyword, competitor: k.competitor ? cleanDomain(k.competitor) : undefined, source });
+    }
+    const imported = await ctx.store.upsertKeywords(b.id, [...rows.values()]);
+    if (source === "semrush") await ctx.store.logImport(b.id, "semrush_refresh", "via Claude (SEMrush connector)", imported, ctx.actor.userId ?? null);
+    else await ctx.store.logImport(b.id, "keywords_manual", "via Claude", imported, ctx.actor.userId ?? null);
+    return { imported, skipped };
+  },
+});
+
+export const SEO_TOOLS = [listKeywordOpportunities, checkCannibalizationTool, searchSitePages, searchProjects, assignClusters, importKeywords];
