@@ -26,13 +26,18 @@ export function fakePlanStore(seed: { schedule?: BrandSchedule | null; history?:
     async upsertHistory(brandId, rows: HistoryInsert[], postId = null) {
       for (const r of rows) {
         const idx = store.history.findIndex((h) => h.platform === r.platform && h.external_id === r.external_id);
-        const row: HistoryRow = { id: idx >= 0 ? store.history[idx].id : `h${++n}`, brand_id: brandId, ...r, interactions: r.likes + r.comments + r.shares, post_id: postId };
+        const row: HistoryRow = { id: idx >= 0 ? store.history[idx].id : `h${++n}`, brand_id: brandId, ...r, interactions: r.likes + r.comments + r.shares, post_id: postId ?? (idx >= 0 ? store.history[idx].post_id : null) };
         if (idx >= 0) store.history[idx] = row; else store.history.push(row);
       }
       return rows.length;
     },
     async getHistoryCursor() { return store.cursor; },
-    async setHistoryCursor(_b, cursor, synced) { store.cursor = cursor; if (synced && store.schedule) store.schedule.history_synced_at = new Date().toISOString(); },
+    async setHistoryCursor(brandId, cursor, synced) {
+      store.cursor = cursor;
+      if (!synced) return;
+      if (store.schedule) store.schedule.history_synced_at = new Date().toISOString();
+      else store.schedule = { brand_id: brandId, slots: [], recycle_cap: 3, rest_days_min: 60, rest_days_max: 90, history_synced_at: new Date().toISOString() };
+    },
     async listProjects() { return seed.projects ?? []; },
     async listPublishedArticles() { return seed.articles ?? []; },
     async listUsage() { return { postedProjectIds: new Set(), pinnedProjectIds: new Set(), recycledHistoryIds: new Set(), promoedArticleIds: new Set(), recentStates: [], ...seed.usage }; },
@@ -47,7 +52,7 @@ export function fakePlanStore(seed: { schedule?: BrandSchedule | null; history?:
     async discardPlannedPost(id) {
       const p = store.posts.find((x) => x.id === id);
       if (p) p.status = "archived";
-      for (const j of store.jobs) if (j.post_id === id && j.status === "queued") j.status = "failed";
+      for (const j of store.jobs) if (j.post_id === id && (j.status === "queued" || j.status === "claimed")) j.status = "failed";
     },
     async markTouched(id) { const p = store.posts.find((x) => x.id === id); if (p) p.plan = { ...p.plan, touched: true }; },
     async enqueueJob(_b, type, input, post_id, article_id) { const id = `j${++n}`; store.jobs.push({ id, type, input, post_id, article_id, status: "queued" }); return id; },

@@ -29,7 +29,7 @@ export interface PlanStore {
   setHistoryCursor(brandId: string, cursor: Record<string, string | null>, synced: boolean): Promise<void>;
   listProjects(brandId: string): Promise<ProjectLike[]>;
   listPublishedArticles(brandId: string): Promise<ArticleLike[]>;
-  /** project ids referenced by any non-archived post; history ids / recycled_from used by posts in the last 180 days; article ids with a promo post; states used in the last 4 weeks. */
+  /** project ids referenced by any non-archived post; history ids from `plan.candidate_id` of recycle-lane posts in the last 180 days; article ids with a promo post; states used in the last 4 weeks. */
   listUsage(brandId: string, now: Date): Promise<{ postedProjectIds: Set<string>; pinnedProjectIds: Set<string>; recycledHistoryIds: Set<string>; promoedArticleIds: Set<string>; recentStates: string[] }>;
   favourCategory(brandId: string): Promise<string | null>;
   listPlannedPosts(brandId: string, weekStart: string): Promise<PlannedPost[]>;
@@ -79,7 +79,7 @@ export function createSupabasePlanStore(): PlanStore {
     },
     async upsertHistory(brandId, rows, postId = null) {
       if (rows.length === 0) return 0;
-      const { error } = await admin.from("social_history").upsert(rows.map((r) => ({ brand_id: brandId, ...r, media: r.media as unknown as Json, post_id: postId, fetched_at: new Date().toISOString() })), { onConflict: "brand_id,platform,external_id" });
+      const { error } = await admin.from("social_history").upsert(rows.map((r) => ({ brand_id: brandId, ...r, media: r.media as unknown as Json, ...(postId ? { post_id: postId } : {}), fetched_at: new Date().toISOString() })), { onConflict: "brand_id,platform,external_id" });
       if (error) fail(error);
       return rows.length;
     },
@@ -106,7 +106,7 @@ export function createSupabasePlanStore(): PlanStore {
       const since90 = new Date(now.getTime() - 90 * 86_400_000).toISOString();
       const since28 = new Date(now.getTime() - 28 * 86_400_000).toISOString();
       const [{ data: posts }, { data: pins }, { data: recentPosts }] = await Promise.all([
-        admin.from("posts").select("project_id,recycled_from,plan,created_at").eq("brand_id", brandId).neq("status", "archived"),
+        admin.from("posts").select("project_id,plan,created_at").eq("brand_id", brandId).neq("status", "archived"),
         admin.from("pins").select("project_id").eq("brand_id", brandId).neq("status", "archived").gte("created_at", since90),
         admin.from("posts").select("project:projects(state)").eq("brand_id", brandId).neq("status", "archived").gte("created_at", since28).not("project_id", "is", null),
       ]);
@@ -150,7 +150,8 @@ export function createSupabasePlanStore(): PlanStore {
       return data!.id;
     },
     async discardPlannedPost(postId) {
-      await admin.from("generation_jobs").update({ status: "failed", error: "Cancelled: plan rebuilt" }).eq("post_id", postId).in("status", ["queued", "claimed"]);
+      const { error: jobsError } = await admin.from("generation_jobs").update({ status: "failed", error: "Cancelled: plan rebuilt" }).eq("post_id", postId).in("status", ["queued", "claimed"]);
+      if (jobsError) fail(jobsError);
       const { error } = await admin.from("posts").update({ status: "archived" }).eq("id", postId);
       if (error) fail(error);
     },
