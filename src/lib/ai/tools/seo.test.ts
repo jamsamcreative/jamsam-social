@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { fakeStore, BRAND, job } from "@/lib/ai/fake-store";
-import { listKeywordOpportunities, checkCannibalizationTool, searchProjects, assignClusters } from "@/lib/ai/tools/seo";
+import { listKeywordOpportunities, checkCannibalizationTool, searchProjects, assignClusters, importKeywords } from "@/lib/ai/tools/seo";
 import { createArticle } from "@/lib/ai/tools/write";
 import { buildBrief } from "@/lib/ai/brief";
 import type { Keyword, SitePage } from "@/lib/ai/store";
@@ -40,6 +40,27 @@ describe("seo tools", () => {
     expect(await assignClusters.run(ctx(store), { brand: "acme", assignments: [{ keyword: "Metal Roofing Spokane", cluster: "Metal Roofing" }, { keyword: "nope", cluster: "X" }] })).toEqual({ assigned: 1 });
     expect(store.keywords[0].cluster).toBe("Metal Roofing");
     await expect(assignClusters.run(ctx(store), { brand: "acme", assignments: [{ keyword: "nope", cluster: "X" }] })).rejects.toThrow(/exact keyword/);
+  });
+  it("import_keywords normalises, dedups, upserts and logs a SEMrush refresh", async () => {
+    const store = fakeStore({ keywords: [kw({ keyword: "horse barns", volume: 100 })] });
+    const out = await importKeywords.run(ctx(store), { brand: "acme", source: "semrush", keywords: [
+      { keyword: " Horse  Barns ", volume: 3600, difficulty: 39, intent: "Commercial" },
+      { keyword: "barn kits", volume: 590 },
+      { keyword: "barn kits", volume: 600, competitor: "https://www.mqsbarn.com/x", competitor_position: 4 },
+      { keyword: "   " },
+    ] });
+    expect(out).toEqual({ imported: 2, skipped: 2 });
+    expect(store.keywords.find((k) => k.keyword === "horse barns")).toMatchObject({ volume: 3600, difficulty: 39, source: "semrush" });
+    expect(store.keywords.find((k) => k.keyword === "barn kits")).toMatchObject({ volume: 600, competitor: "mqsbarn.com", competitor_position: 4 });
+    expect(store.imports[0]).toMatchObject({ kind: "semrush_refresh", rows: 2 });
+    expect(store.imports[0].detail).toMatch(/Claude/);
+  });
+  it("import_keywords with source=manual logs keywords_manual and rejects unknown brands", async () => {
+    const store = fakeStore();
+    await importKeywords.run(ctx(store), { brand: "acme", source: "manual", keywords: [{ keyword: "pole barns" }] });
+    expect(store.keywords[0]).toMatchObject({ keyword: "pole barns", source: "manual" });
+    expect(store.imports[0].kind).toBe("keywords_manual");
+    await expect(importKeywords.run(ctx(store), { brand: "nope", source: "manual", keywords: [{ keyword: "x" }] })).rejects.toThrow();
   });
   it("briefs carry the opportunity for article jobs and keywords for cluster jobs", async () => {
     const store = fakeStore({ keywords: [kw({ keyword: "metal roofing spokane", cluster: "Metal Roofing", volume: 480 }), kw({ id: "k2", keyword: "pole barn kits" })] });

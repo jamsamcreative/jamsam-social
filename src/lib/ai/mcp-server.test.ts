@@ -26,7 +26,7 @@ describe("MCP server", () => {
     const client = await connect({ Authorization: `Bearer ${TOKEN}` });
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
-      "assign_clusters", "check_cannibalization", "claim_job", "complete_job", "create_article", "create_pin", "create_post", "get_article", "get_brand_guidelines", "get_content_mix",
+      "assign_clusters", "check_cannibalization", "claim_job", "complete_job", "create_article", "create_pin", "create_post", "get_article", "get_brand_guidelines", "get_content_mix", "import_keywords",
       "list_articles", "list_brands", "list_jobs", "list_keyword_opportunities", "list_media_assets", "list_pin_boards", "list_posts", "list_unpinned", "search_projects", "search_site_pages", "search_wp_media", "submit_captions", "update_article",
     ]);
     const r = await client.callTool({ name: "list_brands", arguments: {} });
