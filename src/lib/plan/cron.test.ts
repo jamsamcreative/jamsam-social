@@ -15,6 +15,13 @@ describe("runPlanCycle", () => {
     const second = await runPlanCycle(store, now);
     expect(second).toEqual({ built: [], skipped: [`${BRAND.slug}:2026-09-21`], failed: [] });
   });
+  it("records a per-brand failure instead of throwing when the build blows up", async () => {
+    const store = fakePlanStore({ schedule });
+    store.listProjects = async () => { throw new Error("projects table unavailable"); };
+    await expect(runPlanCycle(store, new Date("2026-09-14T13:00:00Z"))).resolves.toEqual({ built: [], skipped: [], failed: [{ brand: BRAND.slug, error: "projects table unavailable" }] });
+    expect(store.posts).toEqual([]);
+    expect(store.weeks).toEqual([]);
+  });
   it("skips brands without a schedule", async () => {
     const store = fakePlanStore({ schedule: null });
     expect(await runPlanCycle(store, new Date("2026-09-14T13:00:00Z"))).toEqual({ built: [], skipped: [`${BRAND.slug}:no-schedule`], failed: [] });

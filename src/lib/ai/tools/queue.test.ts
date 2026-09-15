@@ -24,4 +24,27 @@ describe("queue tools", () => {
     await completeJob.run(ctx(store), { job_id: store.jobs[0].id, error: "gave up" });
     expect(store.jobs[0]).toMatchObject({ status: "failed", error: "gave up" });
   });
+  describe("weekly plan backstop", () => {
+    const plan = { week_start: "2026-09-21", lane: "promo" as const, reason: "New article", candidate_id: "article:a1", touched: false };
+    const postId = "55555555-5555-4555-8555-555555555555";
+    it("stamps job.input.plan onto a promo post that has no plan", async () => {
+      const store = fakeStore({ jobs: [job({ runner: "mcp", status: "claimed", type: "promo", input: { article_id: "66666666-6666-4666-8666-666666666666", plan } })] });
+      await completeJob.run(ctx(store), { job_id: store.jobs[0].id, result: { post_id: postId } });
+      expect(store.jobs[0]).toMatchObject({ status: "completed", post_id: postId });
+      expect(store.setPostPlanIfMissing).toHaveBeenCalledWith(postId, plan);
+      expect(store.plans.get(postId)).toEqual(plan);
+    });
+    it("never overwrites a plan the post already has", async () => {
+      const store = fakeStore({ jobs: [job({ runner: "mcp", status: "claimed", type: "promo", input: { article_id: "66666666-6666-4666-8666-666666666666", plan } })] });
+      const existing = { ...plan, reason: "Set by create_post", touched: true };
+      store.plans.set(postId, existing);
+      await completeJob.run(ctx(store), { job_id: store.jobs[0].id, result: { post_id: postId } });
+      expect(store.plans.get(postId)).toEqual(existing);
+    });
+    it("does nothing for jobs without a plan", async () => {
+      const store = fakeStore({ jobs: [job({ runner: "mcp", status: "claimed", type: "promo", input: { article_id: "66666666-6666-4666-8666-666666666666" } })] });
+      await completeJob.run(ctx(store), { job_id: store.jobs[0].id, result: { post_id: postId } });
+      expect(store.setPostPlanIfMissing).not.toHaveBeenCalled();
+    });
+  });
 });

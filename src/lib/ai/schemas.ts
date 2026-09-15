@@ -22,7 +22,7 @@ export const articleInputSchema = z.object({
   notes: z.string().trim().max(4000).optional(),
 });
 export const promoInputSchema = z.object({ article_id: uuid, scheduled_after: z.string().datetime({ offset: true }).optional(), plan: planMetaSchema.optional() });
-export const rewriteInputSchema = z.object({ post_id: uuid });
+export const rewriteInputSchema = z.object({ post_id: uuid, plan: planMetaSchema.optional() });
 export const seoClusterInputSchema = z.object({ limit: z.number().int().min(1).max(300).default(300) });
 export const pinInputSchema = z
   .object({ media_asset_id: uuid.optional(), project_id: uuid.optional(), board_id: z.string().optional(), notes: z.string().trim().max(2000).optional() })

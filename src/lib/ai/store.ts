@@ -56,6 +56,8 @@ export type Store = {
   listPosts(brandId: string, status?: PostStatus[], limit?: number): Promise<PostSummary[]>;
   getPost(id: string): Promise<PostSummary | null>;
   createPost(input: CreatePostInput): Promise<{ post_id: string }>;
+  /** Weekly Plan backstop: stamps `plan` onto a post that has none (promo/rewrite jobs whose writer forgot to copy it). True when written. */
+  setPostPlanIfMissing(postId: string, plan: PlanMeta): Promise<boolean>;
   createArticle(input: CreateArticleInput): Promise<{ article_id: string }>;
   updateArticle(id: string, patch: Partial<CreateArticleInput>): Promise<void>;
   listJobs(opts: { brandId?: string; status?: JobStatus; runner?: JobRunner }): Promise<StoreJob[]>;
@@ -215,6 +217,11 @@ export function createSupabaseStore(admin = createAdminSupabase()): Store {
         .insert(input.targets.map((t) => ({ post_id: data.id, platform: t.platform, caption: t.caption, scheduled_at: t.scheduled_at })));
       if (tErr) fail(tErr);
       return { post_id: data.id };
+    },
+    async setPostPlanIfMissing(postId, plan) {
+      const { data, error } = await admin.from("posts").update({ plan: plan as unknown as Json }).eq("id", postId).is("plan", null).select("id");
+      if (error) fail(error);
+      return (data?.length ?? 0) > 0;
     },
     async createArticle(input) {
       const { created_by, ...rest } = input;
