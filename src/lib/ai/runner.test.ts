@@ -50,6 +50,15 @@ describe("runJobWith", () => {
     expect(store.setPostPlanIfMissing).toHaveBeenCalled();
     warn.mockRestore();
   });
+  it("a planner caption job completed in-app fills the draft's captions and moves it to pending_approval", async () => {
+    const store = fakeStore({ jobs: [job({ input: { post_id: post.id, plan: { lane: "new_page", reason: "New page" } }, post_id: post.id })], posts: [{ ...post, targets: [{ platform: "facebook", caption: "", scheduled_at: "2026-09-21T22:30:00Z" }, { platform: "instagram", caption: "", scheduled_at: "2026-09-22T00:30:00Z" }] }] });
+    store.plans.set(post.id, { week_start: "2026-09-21", lane: "new_page", reason: "New page", candidate_id: "project:p1", touched: false });
+    const { client } = fakeClient([{ tool: { name: "submit_captions", input: { job_id: store.jobs[0].id, captions: { facebook: good, instagram: good } } } }]);
+    expect(await runJobWith(store.jobs[0].id, { store, client, model: "m" })).toBe("completed");
+    expect(store.posts[0].status).toBe("pending_approval");
+    expect(store.posts[0].targets.map((t) => t.caption)).toEqual([good, good]);
+    expect(store.plans.get(post.id)?.touched).toBe(false);
+  });
   it("skips a job that is not queued", async () => {
     const store = fakeStore({ jobs: [job({ status: "completed" })] });
     const { client } = fakeClient([]);

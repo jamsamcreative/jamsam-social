@@ -50,6 +50,18 @@ describe("queue tools", () => {
       expect(warn).toHaveBeenCalledWith(expect.stringMatching(/db down/));
       warn.mockRestore();
     });
+    it("complete_job on a planner caption job fills the draft's captions and moves it to pending_approval", async () => {
+      const captionPostId = "44444444-4444-4444-8444-444444444444";
+      const post = { id: captionPostId, brand_id: "b1", title: "Project", link_url: null, media: [], status: "draft" as const, category_id: null, targets: [{ platform: "facebook" as const, caption: "", scheduled_at: "2026-09-21T22:30:00Z" }, { platform: "instagram" as const, caption: "", scheduled_at: "2026-09-22T00:30:00Z" }] };
+      const store = fakeStore({ jobs: [job({ runner: "mcp", status: "claimed", type: "caption", post_id: captionPostId, input: { post_id: captionPostId, plan: { lane: "new_page", reason: "New page" } } })], posts: [post] });
+      store.plans.set(captionPostId, { ...plan, lane: "new_page", candidate_id: "project:p1" });
+      const captions = { facebook: "Deck done", instagram: "Deck done #decks" };
+      await completeJob.run(ctx(store), { job_id: store.jobs[0].id, result: { captions } });
+      expect(store.jobs[0]).toMatchObject({ status: "completed", result: { captions } });
+      expect(store.posts[0].status).toBe("pending_approval");
+      expect(store.posts[0].targets.map((t) => t.caption)).toEqual([captions.facebook, captions.instagram]);
+      expect(store.plans.get(captionPostId)?.touched).toBe(false);
+    });
     it("does nothing for jobs without a plan", async () => {
       const store = fakeStore({ jobs: [job({ runner: "mcp", status: "claimed", type: "promo", input: { article_id: "66666666-6666-4666-8666-666666666666" } })] });
       await completeJob.run(ctx(store), { job_id: store.jobs[0].id, result: { post_id: postId } });
