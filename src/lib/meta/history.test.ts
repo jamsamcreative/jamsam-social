@@ -39,7 +39,7 @@ describe("parseInstagramMedia", () => {
 
 describe("fetchHistoryPage", () => {
   it("calls the posts edge with fields on the first page and follows the cursor url verbatim after", async () => {
-    const fetchImpl = vi.fn(async (url: string | URL | Request) => new Response(JSON.stringify(fb), { status: 200, headers: { "content-type": "application/json" } }));
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify(fb), { status: 200, headers: { "content-type": "application/json" } }));
     const first = await fetchHistoryPage({ platform: "facebook", token: "T", pageId: "123", cursorUrl: null, fetchImpl: fetchImpl as unknown as typeof fetch });
     expect(first.rows).toHaveLength(3);
     const u1 = new URL(String((fetchImpl.mock.calls[0] as unknown[])[0]));
@@ -60,5 +60,19 @@ describe("fetchHistoryPage", () => {
   });
   it("throws when instagram is requested without an IG user id", async () => {
     await expect(fetchHistoryPage({ platform: "instagram", token: "T", pageId: "123", cursorUrl: null })).rejects.toThrow(/Instagram/);
+  });
+  it("rejects with a status-bearing error when a cursor page returns non-JSON", async () => {
+    const fetchImpl = vi.fn(async () => new Response("<html>rate limited</html>", { status: 429 }));
+    await expect(
+      fetchHistoryPage({ platform: "facebook", token: "T", pageId: "123", cursorUrl: "https://graph.facebook.com/v21.0/123/posts?after=abc", fetchImpl: fetchImpl as unknown as typeof fetch }),
+    ).rejects.toThrow(/429/);
+  });
+  it("surfaces the Graph error message when a cursor page returns a JSON error body", async () => {
+    const fetchImpl = vi.fn(
+      async () => new Response(JSON.stringify({ error: { message: "Invalid OAuth access token", code: 190 } }), { status: 400, headers: { "content-type": "application/json" } }),
+    );
+    await expect(
+      fetchHistoryPage({ platform: "facebook", token: "T", pageId: "123", cursorUrl: "https://graph.facebook.com/v21.0/123/posts?after=abc", fetchImpl: fetchImpl as unknown as typeof fetch }),
+    ).rejects.toThrow(/Invalid OAuth access token/);
   });
 });

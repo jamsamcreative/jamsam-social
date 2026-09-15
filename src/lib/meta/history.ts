@@ -69,8 +69,15 @@ export async function fetchHistoryPage(i: { platform: "facebook" | "instagram"; 
     const u = new URL(i.cursorUrl);
     u.searchParams.set("access_token", i.token);
     const res = await fetchWithTimeout(u, {}, 20_000, fetchImpl);
-    payload = await res.json();
-    if (!res.ok) throw new Error(`Meta history page failed (${res.status})`);
+    const text = await res.text();
+    let json: { error?: { message?: string } };
+    try {
+      json = JSON.parse(text);
+    } catch {
+      throw new Error(`Meta history page failed (${res.status}): non-JSON response`);
+    }
+    if (!res.ok || json.error) throw new Error(`Meta history page failed (${res.status}): ${json.error?.message ?? res.statusText}`);
+    payload = json;
   } else if (i.platform === "facebook") {
     payload = await graphFetch(`/${i.pageId}/posts`, { token: i.token, params: { fields: FB_FIELDS, limit: String(PAGE_SIZE), ...(i.since ? { since: i.since } : {}) }, fetchImpl });
   } else {
