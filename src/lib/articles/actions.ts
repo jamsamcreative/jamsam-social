@@ -28,8 +28,8 @@ async function load(id: string): Promise<Loaded> {
 }
 
 function refresh(id?: string) {
-  revalidatePath("/articles");
-  if (id) revalidatePath(`/articles/${id}`);
+  revalidatePath("/blog");
+  if (id) revalidatePath(`/blog/${id}`);
   revalidatePath("/dashboard");
 }
 
@@ -215,7 +215,7 @@ export async function refreshTerms(brandId: string): Promise<ActionResult> {
   try {
     const t = await getWpTerms(brandId, { refresh: true });
     if (!t) return { ok: false, error: "WordPress is not connected for this brand" };
-    revalidatePath("/articles", "layout");
+    revalidatePath("/blog", "layout");
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };

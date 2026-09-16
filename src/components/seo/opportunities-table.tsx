@@ -73,7 +73,7 @@ export function OpportunitiesTable({ brandId, keywords, targeted, freshness }: {
 function Row({ k, brandId, pending, run }: { k: Opportunity<KeywordRow>; brandId: string; pending: boolean; run: (fn: () => Promise<{ ok: boolean; error?: string; message?: string }>) => void }) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(k.cluster ?? "");
-  const brief = `/articles?brief=${encodeURIComponent(k.keyword)}&cluster=${encodeURIComponent(k.cluster ?? "")}&decision=${k.action.startsWith("OPTIMIZE") ? "optimize" : "new"}`;
+  const brief = `/blog?brief=${encodeURIComponent(k.keyword)}&cluster=${encodeURIComponent(k.cluster ?? "")}&decision=${k.action.startsWith("OPTIMIZE") ? "optimize" : "new"}`;
   return (
     <tr className="border-t">
       <td className={td}><span className="font-medium">{k.keyword}</span><span className="block text-xs text-muted-foreground">{k.source}</span></td>

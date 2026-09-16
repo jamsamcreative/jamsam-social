@@ -44,7 +44,7 @@ export function ArticleForm({ brand, article, assets, terms }: { brand: Brand; a
     if (!state) return;
     if (state.ok) {
       toast.success("Saved");
-      if (state.id && !article) router.push(`/articles/${state.id}`);
+      if (state.id && !article) router.push(`/blog/${state.id}`);
       else router.refresh();
     } else toast.error(state.error);
   }, [state, article, router]);
@@ -143,15 +143,15 @@ export function ArticleForm({ brand, article, assets, terms }: { brand: Brand; a
           <div className="space-y-2 rounded-lg border p-3">
             <Label htmlFor="decision">Decision</Label>
             <select id="decision" value={decision} onChange={(e) => setDecision(e.target.value as typeof decision)} className="w-full rounded-md border bg-background px-2 py-1.5 text-sm">
-              <option value="new">New article</option>
+              <option value="new">New blog post</option>
               <option value="rewrite">Rewrite of an existing page</option>
               <option value="optimize">Optimize an existing page</option>
             </select>
-            <Textarea placeholder="Why this article / keyword?" rows={3} value={rationale} onChange={(e) => setRationale(e.target.value)} />
+            <Textarea placeholder="Why this blog post / keyword?" rows={3} value={rationale} onChange={(e) => setRationale(e.target.value)} />
           </div>
         </aside>
       </div>
-      <Button type="submit" disabled={pending}>{pending ? "Saving..." : article ? "Save changes" : "Create article"}</Button>
+      <Button type="submit" disabled={pending}>{pending ? "Saving..." : article ? "Save changes" : "Create blog post"}</Button>
     </form>
   );
 }

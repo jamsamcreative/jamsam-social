@@ -32,11 +32,11 @@ test("content-mix category, queue an MCP article job, cancel it", async ({ page 
   await expect(page.getByText(/Next post should favour/)).toBeVisible();
 
   // Queue an MCP job from the articles page; it must not run (no external agent)
-  await page.goto("/articles");
+  await page.goto("/blog");
   await page.getByRole("button", { name: /New from brief/ }).click();
   await page.getByLabel("Topic").fill(`E2E topic ${stamp}`);
   await page.getByLabel("Runner").selectOption("mcp");
-  await page.getByRole("button", { name: "Write article" }).click();
+  await page.getByRole("button", { name: "Write blog post" }).click();
   await expect(page).toHaveURL(/\/jobs/);
   const row = page.getByRole("row").filter({ hasText: "Article" }).filter({ hasText: "Queued" }).first();
   await expect(row).toBeVisible();
