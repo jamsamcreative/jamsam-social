@@ -51,11 +51,11 @@ export function ContentSocial({ vm }: { vm: ContentSocialVM }) {
         )}
       </div>
       <div className="space-y-2 rounded-lg border p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Articles published</p>
-        {vm.articlesPublished.length === 0 ? <p className="text-sm text-muted-foreground">No articles published in this range.</p> : (
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Blog posts published</p>
+        {vm.articlesPublished.length === 0 ? <p className="text-sm text-muted-foreground">No blog posts published in this range.</p> : (
           <ul className="space-y-1 text-sm">
             {vm.articlesPublished.map((a) => (
-              <li key={a.id}><Link href={`/articles/${a.id}`} className="underline">{a.title}</Link> <span className="text-xs text-muted-foreground">{new Date(a.published_at).toLocaleDateString()}</span>{a.wp_link && <a href={a.wp_link} target="_blank" rel="noreferrer" className="ml-2 text-xs text-muted-foreground underline">live</a>}</li>
+              <li key={a.id}><Link href={`/blog/${a.id}`} className="underline">{a.title}</Link> <span className="text-xs text-muted-foreground">{new Date(a.published_at).toLocaleDateString()}</span>{a.wp_link && <a href={a.wp_link} target="_blank" rel="noreferrer" className="ml-2 text-xs text-muted-foreground underline">live</a>}</li>
             ))}
           </ul>
         )}

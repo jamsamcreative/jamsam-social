@@ -9,7 +9,7 @@ import { retryJob, cancelJob, type ActionResult } from "@/lib/jobs/actions";
 import { formatInZone } from "@/lib/time/zoned";
 import type { GenerationJob } from "@/lib/jobs/queries";
 
-const TYPE_LABEL = { caption: "Captions", article: "Article", promo: "Promo post", rewrite: "Rewrite", seo_cluster: "Keyword clusters", pin: "Pin" } as const;
+const TYPE_LABEL = { caption: "Captions", article: "Blog post", promo: "Promo post", rewrite: "Rewrite", seo_cluster: "Keyword clusters", pin: "Pin" } as const;
 
 function duration(j: GenerationJob): string {
   if (!j.started_at) return "";
@@ -36,7 +36,7 @@ export function JobsTable({ jobs, timezone }: { jobs: GenerationJob[]; timezone:
     });
   const output = (j: GenerationJob) =>
     j.article_id ? (
-      <Link className="underline" href={`/articles/${j.article_id}`}>Article</Link>
+      <Link className="underline" href={`/blog/${j.article_id}`}>Article</Link>
     ) : j.post_id ? (
       <Link className="underline" href={`/posts/${j.post_id}`}>Post</Link>
     ) : null;

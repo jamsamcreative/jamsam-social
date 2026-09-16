@@ -5,7 +5,7 @@ import { listMediaAssets } from "@/lib/media/queries";
 import { getWpTerms } from "@/lib/wordpress/terms";
 import { ArticleForm } from "@/components/articles/article-form";
 
-export const metadata = { title: "New article" };
+export const metadata = { title: "New blog post" };
 
 export default async function NewArticlePage() {
   const [brands, currentSlug] = await Promise.all([listBrands(), getCurrentBrandSlug()]);
@@ -24,7 +24,7 @@ export default async function NewArticlePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">New article</h1>
+        <h1 className="text-2xl font-semibold">New blog post</h1>
         <p className="text-sm text-muted-foreground">For {brand.name}{terms ? "" : " · WordPress not connected, categories and tags unavailable"}</p>
       </div>
       <ArticleForm brand={brand} assets={assets} terms={terms} />

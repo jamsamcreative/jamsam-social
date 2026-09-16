@@ -16,7 +16,7 @@ export function KeywordMap({ articles, pages, keywords }: { articles: ArticleTar
     if (!r) { r = { keyword: key, targets: [], k: byKw.get(key) }; rows.push(r); }
     r.targets.push(t);
   };
-  for (const a of articles) if (a.primary_keyword) add(a.primary_keyword, { kind: "article", label: `${a.title} (${a.status})`, href: `/articles/${a.id}` });
+  for (const a of articles) if (a.primary_keyword) add(a.primary_keyword, { kind: "article", label: `${a.title} (${a.status})`, href: `/blog/${a.id}` });
   for (const p of pages) if (p.focus_keyword) add(p.focus_keyword, { kind: "live page", label: p.title, href: p.url });
   const collisions = rows.filter((r) => r.targets.length > 1);
   const noKeyword = articles.filter((a) => !a.primary_keyword);
@@ -30,7 +30,7 @@ export function KeywordMap({ articles, pages, keywords }: { articles: ArticleTar
         <table className="w-full text-sm">
           <thead className="bg-muted/40"><tr><th className={th}>Keyword</th><th className={th}>Targeted by</th><th className={th}>Our position</th><th className={th}>Volume</th></tr></thead>
           <tbody>
-            {rows.length === 0 && <tr><td className="p-3 text-muted-foreground" colSpan={4}>No article or page has a primary/focus keyword yet.</td></tr>}
+            {rows.length === 0 && <tr><td className="p-3 text-muted-foreground" colSpan={4}>No blog post or page has a primary/focus keyword yet.</td></tr>}
             {rows.map((r) => (
               <tr key={r.keyword} className={`border-t ${r.targets.length > 1 ? "bg-amber-50/50" : ""}`}>
                 <td className={`${td} font-medium`}>{r.keyword}</td>
@@ -44,8 +44,8 @@ export function KeywordMap({ articles, pages, keywords }: { articles: ArticleTar
       </div>
       {noKeyword.length > 0 && (
         <div className="space-y-1">
-          <p className="text-sm font-medium">Articles without a primary keyword</p>
-          <ul className="list-disc pl-5 text-sm">{noKeyword.map((a) => <li key={a.id}><Link className="underline" href={`/articles/${a.id}`}>{a.title}</Link> <span className="text-xs text-muted-foreground">{a.status}</span></li>)}</ul>
+          <p className="text-sm font-medium">Blog posts without a primary keyword</p>
+          <ul className="list-disc pl-5 text-sm">{noKeyword.map((a) => <li key={a.id}><Link className="underline" href={`/blog/${a.id}`}>{a.title}</Link> <span className="text-xs text-muted-foreground">{a.status}</span></li>)}</ul>
         </div>
       )}
     </div>

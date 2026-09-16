@@ -8,17 +8,17 @@ test("create article, save, list, archive", async ({ page }) => {
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/dashboard/);
 
-  await page.goto("/articles/new");
+  await page.goto("/blog/new");
   const title = `E2E article ${Date.now()}`;
   await page.getByLabel("Title (H1)").fill(title);
   await expect(page.getByLabel("Slug")).toHaveValue(/^e2e-article-\d+$/);
   await page.locator(".ProseMirror").click();
   await page.keyboard.type("Body paragraph.");
-  await page.getByRole("button", { name: "Create article" }).click();
-  await expect(page).toHaveURL(/\/articles\/[0-9a-f-]+$/, { timeout: 15000 });
+  await page.getByRole("button", { name: "Create blog post" }).click();
+  await expect(page).toHaveURL(/\/blog\/[0-9a-f-]+$/, { timeout: 15000 });
   await expect(page.getByText("Draft", { exact: true })).toBeVisible();
 
-  await page.goto("/articles");
+  await page.goto("/blog");
   await page.getByRole("link", { name: new RegExp(title) }).click();
   page.once("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "Archive" }).click();

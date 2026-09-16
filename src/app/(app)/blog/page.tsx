@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { NewFromBrief } from "@/components/articles/new-from-brief";
 import { getDefaultRunner } from "@/lib/settings/queries";
 import { formatInZone } from "@/lib/time/zoned";
+import { SemrushFreshness } from "@/components/seo/semrush-freshness";
 
-export const metadata = { title: "Articles" };
+export const metadata = { title: "Blog" };
 export const maxDuration = 300;
 
 const FILTERS: { key: string; label: string; statuses?: Article["status"][] }[] = [
@@ -39,29 +40,30 @@ export default async function ArticlesPage({ searchParams }: { searchParams: Pro
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Articles</h1>
+          <h1 className="text-2xl font-semibold">Blog</h1>
           <p className="text-sm text-muted-foreground">{brand.name}. Switch brands in the header.</p>
         </div>
         <div className="flex gap-2">
           <NewFromBrief brandId={brand.id} defaultRunner={defaultRunner} />
-          <Button nativeButton={false} render={<Link href="/articles/new" />}>
-            New article
+          <Button nativeButton={false} render={<Link href="/blog/new" />}>
+            New blog post
           </Button>
         </div>
       </div>
+      <SemrushFreshness brands={brands} />
       <div className="flex flex-wrap gap-2 text-sm">
         {FILTERS.map((f) => (
-          <Link key={f.key} href={f.key === "all" ? "/articles" : `/articles?status=${f.key}`} className={filter.key === f.key ? "font-medium underline" : "text-muted-foreground"}>
+          <Link key={f.key} href={f.key === "all" ? "/blog" : `/blog?status=${f.key}`} className={filter.key === f.key ? "font-medium underline" : "text-muted-foreground"}>
             {f.label}
           </Link>
         ))}
       </div>
       {articles.length === 0 ? (
-        <p className="text-muted-foreground">No articles here yet.</p>
+        <p className="text-muted-foreground">No blog posts here yet.</p>
       ) : (
         <div className="space-y-2">
           {articles.map((a) => (
-            <Link key={a.id} href={`/articles/${a.id}`} className="flex items-center gap-4 rounded-lg border p-3 transition-colors hover:bg-muted/40">
+            <Link key={a.id} href={`/blog/${a.id}`} className="flex items-center gap-4 rounded-lg border p-3 transition-colors hover:bg-muted/40">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="truncate font-medium">{a.title}</span>

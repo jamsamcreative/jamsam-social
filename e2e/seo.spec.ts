@@ -34,7 +34,7 @@ test("seo: import keywords CSV, see opportunities, Write this prefills the brief
   await expect(page.getByText("e2e horse barns")).toBeVisible();
   await expect(page.getByText("NEW", { exact: true }).first()).toBeVisible();
   await page.getByRole("row").filter({ hasText: "e2e horse barns" }).getByRole("button", { name: "Write this" }).click();
-  await expect(page).toHaveURL(/\/articles\?brief=/);
+  await expect(page).toHaveURL(/\/blog\?brief=/);
   await expect(page.getByLabel("Topic")).toHaveValue("e2e horse barns");
   await expect(page.getByLabel("Notes")).toHaveValue(/Topic cluster: Agricultural/);
 });

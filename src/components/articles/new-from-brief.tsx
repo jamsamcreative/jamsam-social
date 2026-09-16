@@ -56,7 +56,7 @@ export function NewFromBrief({ brandId, defaultRunner }: { brandId: string; defa
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Write an article with AI</DialogTitle>
+            <DialogTitle>Write a blog post with AI</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1">
@@ -77,7 +77,7 @@ export function NewFromBrief({ brandId, defaultRunner }: { brandId: string; defa
               <div className="space-y-1">
                 <Label htmlFor="brief-decision">Decision</Label>
                 <select id="brief-decision" value={decision} onChange={(e) => setDecision(e.target.value as Decision)} className="w-full rounded-md border bg-background px-2 py-1.5 text-sm">
-                  <option value="new">New article</option>
+                  <option value="new">New blog post</option>
                   <option value="rewrite">Rewrite</option>
                   <option value="optimize">Optimize</option>
                 </select>
@@ -100,7 +100,7 @@ export function NewFromBrief({ brandId, defaultRunner }: { brandId: string; defa
               Cancel
             </Button>
             <Button disabled={pending || topic.trim().length < 3} onClick={submit}>
-              {pending ? "Queuing…" : "Write article"}
+              {pending ? "Queuing…" : "Write blog post"}
             </Button>
           </DialogFooter>
         </DialogContent>
