@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { NewFromBrief } from "@/components/articles/new-from-brief";
 import { getDefaultRunner } from "@/lib/settings/queries";
 import { formatInZone } from "@/lib/time/zoned";
+import { SemrushFreshness } from "@/components/seo/semrush-freshness";
 
 export const metadata = { title: "Blog" };
 export const maxDuration = 300;
@@ -49,6 +50,7 @@ export default async function ArticlesPage({ searchParams }: { searchParams: Pro
           </Button>
         </div>
       </div>
+      <SemrushFreshness brands={brands} />
       <div className="flex flex-wrap gap-2 text-sm">
         {FILTERS.map((f) => (
           <Link key={f.key} href={f.key === "all" ? "/blog" : `/blog?status=${f.key}`} className={filter.key === f.key ? "font-medium underline" : "text-muted-foreground"}>
