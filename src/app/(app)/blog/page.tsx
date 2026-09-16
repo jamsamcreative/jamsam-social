@@ -8,6 +8,9 @@ import { NewFromBrief } from "@/components/articles/new-from-brief";
 import { getDefaultRunner } from "@/lib/settings/queries";
 import { formatInZone } from "@/lib/time/zoned";
 import { SemrushFreshness } from "@/components/seo/semrush-freshness";
+import { ClaudePrompts } from "@/components/blog/claude-prompts";
+import { listKeywordsForBrand, listArticleTargets } from "@/lib/seo/queries";
+import { rankOpportunities, normaliseKeyword } from "@/lib/seo/score";
 
 export const metadata = { title: "Blog" };
 export const maxDuration = 300;
@@ -35,7 +38,9 @@ export default async function ArticlesPage({ searchParams }: { searchParams: Pro
     );
   }
   const filter = FILTERS.find((f) => f.key === status) ?? FILTERS[0];
-  const [articles, defaultRunner] = await Promise.all([listArticles({ brandId: brand.id, status: filter.statuses }), getDefaultRunner()]);
+  const [articles, defaultRunner, keywords, targets] = await Promise.all([listArticles({ brandId: brand.id, status: filter.statuses }), getDefaultRunner(), listKeywordsForBrand(brand.id), listArticleTargets(brand.id)]);
+  const targeted = new Set(targets.map((a) => a.primary_keyword).filter((k): k is string => Boolean(k)).map(normaliseKeyword));
+  const suggested = rankOpportunities(keywords, targeted, { action: "NEW" }).slice(0, 6).map((k) => ({ keyword: k.keyword, volume: k.volume, difficulty: k.difficulty, competitor: k.competitor, competitor_position: k.competitor_position, action: k.action }));
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -51,6 +56,7 @@ export default async function ArticlesPage({ searchParams }: { searchParams: Pro
         </div>
       </div>
       <SemrushFreshness brands={brands} />
+      <ClaudePrompts brandSlug={brand.slug} brandName={brand.name} suggested={suggested} />
       <div className="flex flex-wrap gap-2 text-sm">
         {FILTERS.map((f) => (
           <Link key={f.key} href={f.key === "all" ? "/blog" : `/blog?status=${f.key}`} className={filter.key === f.key ? "font-medium underline" : "text-muted-foreground"}>
