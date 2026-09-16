@@ -25,6 +25,7 @@ export async function runInsightsCycle(opts: { postId?: string } = {}): Promise<
     try {
       const ins = t.platform === "facebook" ? await fetchFacebookInsights(t.external_id, conn.secret.page_access_token) : await fetchInstagramInsights(t.external_id, conn.secret.page_access_token);
       await admin.from("post_targets").update({ insights: ins as unknown as Json, insights_fetched_at: ins.fetched_at }).eq("id", t.id);
+      await admin.from("social_history").update({ likes: ins.likes, comments: ins.comments, shares: ins.shares ?? 0, reach: ins.reach ?? null, fetched_at: ins.fetched_at }).eq("brand_id", brandId).eq("platform", t.platform).eq("external_id", t.external_id);
       counts.updated++;
     } catch {
       counts.failed++;

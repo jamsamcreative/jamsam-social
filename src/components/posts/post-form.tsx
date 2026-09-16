@@ -19,16 +19,21 @@ import type { CaptionResult } from "@/lib/ai/schemas";
 
 type TargetState = { platform: Platform; enabled: boolean; caption: string; scheduled_local: string | null };
 
+// Brand-schedule defaults for a slot opened from the plan/calendar "Add another" link.
+const DEFAULT_SLOT_TIME: Partial<Record<Platform, string>> = { facebook: "15:30", instagram: "17:30" };
+
 export function PostForm({
   brand,
   post,
   assets,
   categories = [],
+  defaultDate,
 }: {
   brand: { id: string; name: string; timezone: string };
   post?: PostWithTargets;
   assets: MediaAsset[];
   categories?: PostCategory[];
+  defaultDate?: string;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(savePost, null);
@@ -43,7 +48,11 @@ export function PostForm({
         platform: p,
         enabled: post ? Boolean(t) : true,
         caption: t?.caption ?? "",
-        scheduled_local: t?.scheduled_at ? utcToZonedLocal(t.scheduled_at, brand.timezone) : null,
+        scheduled_local: t?.scheduled_at
+          ? utcToZonedLocal(t.scheduled_at, brand.timezone)
+          : !post && defaultDate && DEFAULT_SLOT_TIME[p]
+            ? `${defaultDate}T${DEFAULT_SLOT_TIME[p]}`
+            : null,
       };
     }),
   );

@@ -10,6 +10,7 @@ import type { Post, PostTarget } from "./queries";
 import { env } from "@/lib/env";
 import { getConnectionWithSecret } from "@/lib/connections/queries";
 import type { GbpConfig } from "@/lib/connections/gbp";
+import { createSupabasePlanStore } from "@/lib/plan/store";
 
 export type ActionResult = { ok: true; id?: string } | { ok: false; error: string };
 
@@ -81,6 +82,8 @@ export async function savePost(_prev: ActionResult | null, formData: FormData): 
       await supabase.from("post_targets").delete().eq("post_id", id).eq("platform", t.platform).neq("status", "published");
     }
   }
+  // Planned posts edited by hand survive a plan rebuild; no-op for posts without `plan`.
+  await createSupabasePlanStore().markTouched(id);
   refresh();
   return { ok: true, id };
 }
@@ -203,6 +206,7 @@ export async function rescheduleTarget(targetId: string, newIso: string): Promis
   const postStatus = (t.post as unknown as { status: string } | null)?.status;
   if (postStatus === "publishing") return { ok: false, error: "Post is publishing" };
   await supabase.from("post_targets").update({ scheduled_at: newIso }).eq("id", targetId);
+  await createSupabasePlanStore().markTouched(t.post_id);
   refresh();
   return { ok: true };
 }

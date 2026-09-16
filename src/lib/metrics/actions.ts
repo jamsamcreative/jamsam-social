@@ -14,7 +14,7 @@ export async function syncNow(brandId: string): Promise<SyncNowResult> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Not signed in" };
-  const { data: runs } = await createAdminSupabase().from("sync_runs").select("last_run_at").eq("brand_id", brandId);
+  const { data: runs } = await createAdminSupabase().from("sync_runs").select("last_run_at").eq("brand_id", brandId).neq("source", "plan");
   const latest = Math.max(0, ...(runs ?? []).map((r) => (r.last_run_at ? Date.parse(r.last_run_at) : 0)));
   if (Date.now() - latest < COOLDOWN_MS) return { ok: false, error: `Synced ${Math.round((Date.now() - latest) / 60000)} min ago — try again in a few minutes` };
   try {

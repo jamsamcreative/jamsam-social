@@ -2,6 +2,7 @@ import { z } from "zod";
 import { defineTool, ToolError } from "./types";
 import type { Json } from "@/lib/database.types";
 import { parseJobResult } from "../schemas";
+import { carryPlanToPost } from "../plan-backstop";
 import { buildBrief } from "../brief";
 
 export const listJobs = defineTool({
@@ -53,6 +54,7 @@ export const completeJob = defineTool({
       post_id: (r.post_id as string | undefined) ?? j.post_id, article_id: (r.article_id as string | undefined) ?? j.article_id,
     });
     if (!done) throw new ToolError(`Job ${job_id} is ${j.status}; only claimed/running jobs can be completed`);
+    await carryPlanToPost(ctx.store, j, r);
     return { ok: true, status: "completed" };
   },
 });

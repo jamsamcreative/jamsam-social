@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { defineTool, requireBrand, ToolError, type ToolCtx } from "./types";
 import { validateCaption } from "../captions";
-import { captionsSchema } from "../schemas";
+import { captionsSchema, planMetaSchema } from "../schemas";
 import { finalSeoTitle, metaDescriptionWarning } from "@/lib/articles/push";
 import type { Json, MediaItem } from "@/lib/database.types";
 import { runCannibalizationCheck } from "./seo";
@@ -40,6 +40,7 @@ export const createPost = defineTool({
     category_slug: z.string().optional().describe("From get_content_mix"),
     article_id: z.string().uuid().optional().describe("For promo posts: the article being promoted"),
     recycled_from: z.string().uuid().optional().describe("For rewrite jobs: the original post id"),
+    plan: planMetaSchema.optional().describe("For planned promo jobs: copy job.input.plan unchanged so the post lands on the weekly plan"),
   }),
   run: async (ctx, i) => {
     const b = await requireBrand(ctx, i.brand);
@@ -48,7 +49,7 @@ export const createPost = defineTool({
     const media: MediaItem[] = i.media_urls.map((url, n) => ({ url, alt: i.media_alts?.[n] ?? null }));
     return ctx.store.createPost({
       brand_id: b.id, title: i.title, link_url: i.link_url ?? null, media, category_id,
-      source: i.recycled_from ? "recycled" : "ai", recycled_from: i.recycled_from ?? null, created_by: ctx.actor.userId ?? null,
+      source: i.recycled_from ? "recycled" : "ai", recycled_from: i.recycled_from ?? null, created_by: ctx.actor.userId ?? null, plan: i.plan ?? null,
       targets: i.targets.map((t) => ({ platform: t.platform, caption: t.caption, scheduled_at: t.scheduled_at ?? null })),
     });
   },

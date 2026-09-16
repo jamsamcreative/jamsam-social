@@ -8,6 +8,7 @@ import { ToolError, type Tool } from "./tools/types";
 import { buildBrief } from "./brief";
 import { buildSystemPrompt } from "./prompts/system";
 import { TERMINAL_TOOL, parseJobResult } from "./schemas";
+import { carryPlanToPost } from "./plan-backstop";
 import type { Json } from "@/lib/database.types";
 
 import { DEFAULT_MODEL } from "@/lib/settings/models";
@@ -114,6 +115,7 @@ export async function runJobWith(jobId: string, deps: RunnerDeps): Promise<"comp
           status: "completed", result: r as Json, finished_at: new Date().toISOString(), error: null,
           post_id: (r.post_id as string | undefined) ?? running.post_id, article_id: (r.article_id as string | undefined) ?? running.article_id,
         });
+        await carryPlanToPost(store, running, r);
         return "completed";
       }
     }

@@ -2,15 +2,18 @@
 import { vi } from "vitest";
 import type { Store, StoreJob, PostSummary, ArticleFull, StoreMedia, SitePage, Keyword, Project, KeywordImport, ArticleKeywordRef, PinBoardInfo } from "./store";
 import type { CategoryLike } from "./content-mix";
+import type { PlanMeta } from "./schemas";
 
 export const BRAND = { id: "b1", slug: "acme", name: "Acme", timezone: "America/Los_Angeles", website_url: "https://acme.com", seo_suffix: "| Acme" };
 
 type Seed = { jobs?: StoreJob[]; posts?: PostSummary[]; articles?: ArticleFull[]; media?: StoreMedia[]; categories?: CategoryLike[]; sitePages?: SitePage[]; keywords?: Keyword[]; projects?: Project[]; articleRefs?: ArticleKeywordRef[]; gscQueryPages?: { query: string; page: string; position: number; clicks: number }[]; imports?: KeywordImport[]; boards?: PinBoardInfo[] };
-export type FakeStore = Store & { jobs: StoreJob[]; keywords: Keyword[]; imports: KeywordImport[]; created: { posts: unknown[]; articles: unknown[]; pins: unknown[] } };
+/** `posts` are mutable seeds; a post's plan lives in `plans` (set it there to make a post "planned"). */
+export type FakeStore = Store & { jobs: StoreJob[]; posts: PostSummary[]; keywords: Keyword[]; imports: KeywordImport[]; created: { posts: unknown[]; articles: unknown[]; pins: unknown[] }; plans: Map<string, PlanMeta> };
 
 export function fakeStore(over: Partial<Store> & Seed = {}): FakeStore {
   const { jobs = [], posts = [], articles = [], media = [], categories = [], sitePages = [], keywords = [], projects = [], articleRefs = [], gscQueryPages = [], imports = [], boards = [], ...overrides } = over;
   const created = { posts: [] as unknown[], articles: [] as unknown[], pins: [] as unknown[] };
+  const plans = new Map<string, PlanMeta>();
   const base: Store = {
     listBrands: vi.fn(async () => [{ ...BRAND, connections: { wordpress: "connected" } }]),
     getBrandBySlug: vi.fn(async (slug) => (slug === BRAND.slug ? BRAND : null)),
@@ -27,6 +30,19 @@ export function fakeStore(over: Partial<Store> & Seed = {}): FakeStore {
     createPost: vi.fn(async (input) => {
       created.posts.push(input);
       return { post_id: "11111111-1111-4111-8111-111111111111" };
+    }),
+    setPostPlanIfMissing: vi.fn(async (postId, plan) => {
+      if (plans.has(postId)) return false;
+      plans.set(postId, plan);
+      return true;
+    }),
+    applyCaptionsToPlannedDraft: vi.fn(async (postId, result) => {
+      const p = posts.find((x) => x.id === postId);
+      if (!p || p.status !== "draft" || !plans.has(postId)) return false;
+      for (const t of p.targets) if (!t.caption.trim()) t.caption = result.captions[t.platform];
+      if (result.category_slug) p.category_id = categories.find((c) => c.slug === result.category_slug)?.id ?? p.category_id;
+      p.status = "pending_approval";
+      return true;
     }),
     createArticle: vi.fn(async (input) => {
       created.articles.push(input);
@@ -69,7 +85,7 @@ export function fakeStore(over: Partial<Store> & Seed = {}): FakeStore {
     getProject: vi.fn(async (id) => projects.find((p) => p.id === id) ?? null),
     getMediaAsset: vi.fn(async (id) => media.find((m) => m.id === id) ?? null),
   };
-  return Object.assign(base, overrides, { jobs, keywords, imports, created });
+  return Object.assign(base, overrides, { jobs, posts, keywords, imports, created, plans });
 }
 
 export function job(over: Partial<StoreJob> = {}): StoreJob {

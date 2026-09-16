@@ -7,7 +7,7 @@ import { GUIDELINE_KINDS, type GuidelineKind } from "@/lib/guidelines/kinds";
 import { MIX_WINDOW, type CategoryLike } from "./content-mix";
 import { boardStats } from "@/lib/pins/rules";
 import type { Database, Json, MediaItem, TermRef } from "@/lib/database.types";
-import type { JobStatus, JobRunner } from "./schemas";
+import type { JobStatus, JobRunner, PlanMeta, CaptionResult } from "./schemas";
 
 type ArticleStatus = Database["public"]["Enums"]["article_status"];
 type PostStatus = Database["public"]["Enums"]["post_status"];
@@ -22,6 +22,8 @@ export type PostSummary = { id: string; brand_id: string; title: string; link_ur
 export type CreatePostInput = {
   brand_id: string; title: string; link_url: string | null; media: MediaItem[]; category_id: string | null; source: "ai" | "recycled";
   recycled_from?: string | null; created_by?: string | null; targets: PostTargetSummary[];
+  /** Weekly Plan metadata when the post is materialised from a plan lane (promo jobs); null otherwise. */
+  plan?: PlanMeta | null;
 };
 export type CreateArticleInput = {
   brand_id: string; title: string; slug: string; content_html: string; excerpt: string | null; seo_title: string | null; meta_description: string | null;
@@ -54,6 +56,14 @@ export type Store = {
   listPosts(brandId: string, status?: PostStatus[], limit?: number): Promise<PostSummary[]>;
   getPost(id: string): Promise<PostSummary | null>;
   createPost(input: CreatePostInput): Promise<{ post_id: string }>;
+  /** Weekly Plan backstop: stamps `plan` onto a post that has none (promo/rewrite jobs whose writer forgot to copy it). True when written. */
+  setPostPlanIfMissing(postId: string, plan: PlanMeta): Promise<boolean>;
+  /**
+   * Weekly Plan backstop for caption jobs: copies each platform's caption onto the post's empty targets, sets the category from
+   * `category_slug`, and moves a planned `draft` (non-null `plan`) to `pending_approval` for human review. Never sets `approved`
+   * and never marks `plan.touched`. True when the post was moved; false when it is not a planned draft any more.
+   */
+  applyCaptionsToPlannedDraft(postId: string, result: CaptionResult): Promise<boolean>;
   createArticle(input: CreateArticleInput): Promise<{ article_id: string }>;
   updateArticle(id: string, patch: Partial<CreateArticleInput>): Promise<void>;
   listJobs(opts: { brandId?: string; status?: JobStatus; runner?: JobRunner }): Promise<StoreJob[]>;
@@ -203,6 +213,7 @@ export function createSupabaseStore(admin = createAdminSupabase()): Store {
         .insert({
           brand_id: input.brand_id, title: input.title, link_url: input.link_url, media: input.media as Json, category_id: input.category_id,
           source: input.source, recycled_from: input.recycled_from ?? null, status: "pending_approval", created_by: input.created_by ?? null,
+          plan: (input.plan ?? null) as Json,
         })
         .select("id")
         .single();
@@ -212,6 +223,32 @@ export function createSupabaseStore(admin = createAdminSupabase()): Store {
         .insert(input.targets.map((t) => ({ post_id: data.id, platform: t.platform, caption: t.caption, scheduled_at: t.scheduled_at })));
       if (tErr) fail(tErr);
       return { post_id: data.id };
+    },
+    async setPostPlanIfMissing(postId, plan) {
+      const { data, error } = await admin.from("posts").update({ plan: plan as unknown as Json }).eq("id", postId).is("plan", null).select("id");
+      if (error) fail(error);
+      return (data?.length ?? 0) > 0;
+    },
+    async applyCaptionsToPlannedDraft(postId, result) {
+      const { data: post } = await admin.from("posts").select("id,brand_id,status,plan").eq("id", postId).maybeSingle();
+      if (!post || post.status !== "draft" || post.plan === null) return false;
+      const { data: targets, error: tErr } = await admin.from("post_targets").select("id,platform,caption").eq("post_id", postId);
+      if (tErr) fail(tErr);
+      for (const t of targets ?? []) {
+        if (t.platform !== "facebook" && t.platform !== "instagram") continue;
+        if (t.caption.trim()) continue;
+        const { error } = await admin.from("post_targets").update({ caption: result.captions[t.platform] }).eq("id", t.id);
+        if (error) fail(error);
+      }
+      let category_id: string | null = null;
+      if (result.category_slug) {
+        const { data: cat } = await admin.from("post_categories").select("id").eq("brand_id", post.brand_id).eq("slug", result.category_slug).maybeSingle();
+        category_id = cat?.id ?? null;
+      }
+      // Status guard on the update keeps this a no-op if a human moved the post while captions were being written.
+      const { data, error } = await admin.from("posts").update({ status: "pending_approval", ...(category_id ? { category_id } : {}) }).eq("id", postId).eq("status", "draft").select("id");
+      if (error) fail(error);
+      return (data?.length ?? 0) > 0;
     },
     async createArticle(input) {
       const { created_by, ...rest } = input;

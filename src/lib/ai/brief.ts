@@ -23,6 +23,8 @@ export type Brief = {
   project?: { id: string; title: string; url: string | null; category: string | null; location: string | null; state: string | null; dims: string | null; description: string | null; images: unknown } | null;
   boards?: { board_id: string; name: string; pins_in_app: number; measured: number; median_impressions: number | null }[];
   recent_pin_titles?: string[];
+  /** Weekly Plan lane for caption/promo jobs created by the planner; absent for hand-made jobs. */
+  plan?: { lane: string; reason: string };
   hard_rules: string;
   instructions: string;
 };
@@ -32,6 +34,7 @@ export async function buildBrief(store: Store, j: StoreJob): Promise<Brief> {
   const parsed = parseJobInput(j.type, j.input);
   if (!parsed.success) throw new Error(`Job ${j.id} has invalid input: ${parsed.error.issues[0]?.message}`);
   const input = parsed.data as Record<string, string>;
+  const plan = (parsed.data as { plan?: { lane: string; reason: string } }).plan;
   const brand = await store.getBrandById(j.brand_id);
   if (!brand) throw new Error(`Brand ${j.brand_id} not found`);
   const [guidelines, cats, recentPosts] = await Promise.all([store.getGuidelines(brand.id), store.listCategories(brand.id), store.listRecentCategorizedPosts(brand.id)]);
@@ -45,12 +48,14 @@ export async function buildBrief(store: Store, j: StoreJob): Promise<Brief> {
     if (!post) throw new Error(`Post ${input.post_id} not found`);
     brief.post = post;
     brief.recent_captions = await recentCaptions();
+    if (plan) brief.plan = { lane: plan.lane, reason: plan.reason };
   }
   if (j.type === "promo") {
     const article = await store.getArticle(input.article_id);
     if (!article) throw new Error(`Article ${input.article_id} not found`);
     brief.article = article;
     brief.recent_captions = await recentCaptions();
+    if (plan) brief.plan = { lane: plan.lane, reason: plan.reason };
   }
   if (j.type === "article") {
     const [media, existing, pages, keywords] = await Promise.all([store.listMedia(brand.id), store.listArticles(brand.id), store.listSitePages(brand.id), store.listKeywords(brand.id)]);
