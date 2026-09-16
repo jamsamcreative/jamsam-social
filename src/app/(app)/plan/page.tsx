@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { listBrands } from "@/lib/brands/queries";
 import { getCurrentBrandSlug } from "@/lib/current-brand";
 import { getPlanPageData } from "@/lib/plan/queries";
 import { weekStartFor } from "@/lib/plan/materialise";
-import { addDays } from "@/lib/plan/timing";
+import { addDays, normaliseWeekStart } from "@/lib/plan/timing";
 import { WeekToolbar } from "@/components/plan/week-toolbar";
 import { PlanDay } from "@/components/plan/plan-day";
 import { RecyclePool } from "@/components/plan/recycle-pool";
@@ -16,7 +17,12 @@ export default async function PlanPage({ searchParams }: { searchParams: Promise
   const brand = brands.find((b) => b.slug === currentSlug) ?? brands[0];
   if (!brand) return <p className="text-muted-foreground">Create a brand first. <Link className="underline" href="/brands/new">New brand</Link></p>;
   const thisWeek = weekStartFor(new Date(), brand.timezone);
-  const weekStart = /^\d{4}-\d{2}-\d{2}$/.test(weekParam ?? "") ? weekParam! : thisWeek;
+  // Any ?week= value is snapped to its Monday; a non-Monday key would mis-place slots and double-book the week.
+  let weekStart = thisWeek;
+  if (weekParam) {
+    try { weekStart = normaliseWeekStart(weekParam); } catch { weekStart = thisWeek; }
+    if (weekStart !== weekParam) redirect(`/plan?week=${weekStart}`);
+  }
   const data = await getPlanPageData(brand.id, weekStart, brand.timezone);
   return (
     <div className="space-y-6">

@@ -27,6 +27,17 @@ export function addDays(ymd: string, n: number): string {
   return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 }
 
+const YMD = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Snaps any YYYY-MM-DD to the Monday of its week (calendar arithmetic only, no timezone). Throws on anything that is not a real date. */
+export function normaliseWeekStart(ymd: string): string {
+  if (!YMD.test(ymd)) throw new Error("weekStart must be a YYYY-MM-DD date");
+  const [y, m, d] = ymd.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (date.toISOString().slice(0, 10) !== ymd) throw new Error("weekStart must be a YYYY-MM-DD date");
+  return addDays(ymd, -((date.getUTCDay() + 6) % 7));
+}
+
 /** Date within the week (Mon..Sun) for a weekday number. */
 function dateForDow(weekStart: string, dow: number): string {
   return addDays(weekStart, (dow + 6) % 7); // Mon=0 … Sun=6 offsets

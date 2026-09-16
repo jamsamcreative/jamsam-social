@@ -52,6 +52,14 @@ describe("materialiseWeek", () => {
     expect(store.posts).toHaveLength(0);
     expect(store.jobs[0]).toMatchObject({ type: "promo", article_id: "art1", input: { article_id: "art1", scheduled_after: "2026-09-14T22:30:00.000Z", plan: { week_start: "2026-09-14", lane: "promo", candidate_id: "article:art1" } } });
   });
+  it("refuses a weekStart that is not a Monday (last line of defence)", async () => {
+    const store = fakePlanStore({ schedule, projects: [proj("n1")] });
+    await expect(materialiseWeek(store, { brandId: BRAND.id, weekStart: "2026-09-16", by: "cron", now: NOW })).rejects.toThrow(/Monday/);
+    await expect(rebuildWeek(store, { brandId: BRAND.id, weekStart: "2026-09-20", by: "u1", now: NOW })).rejects.toThrow(/Monday/);
+    expect(store.posts).toEqual([]);
+    expect(store.jobs).toEqual([]);
+    expect(store.weeks).toEqual([]);
+  });
   it("is a no-op for a brand without a schedule", async () => {
     const store = fakePlanStore({ schedule: null, projects: [proj("n1")] });
     await expect(materialiseWeek(store, { brandId: BRAND.id, weekStart: "2026-09-14", by: "u1", now: NOW })).rejects.toThrow(/schedule/);

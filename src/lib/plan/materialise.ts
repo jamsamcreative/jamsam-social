@@ -1,4 +1,4 @@
-import { resolveSlots, zonedParts, addDays } from "./timing";
+import { resolveSlots, zonedParts, addDays, normaliseWeekStart } from "./timing";
 import { newPageCandidates, recyclePool, promoCandidates, fillerCandidates } from "./candidates";
 import { buildWeek } from "./build";
 import type { PlanStore, NewPlannedPost, PlannedPost } from "./store";
@@ -27,6 +27,11 @@ export async function planWeek(store: PlanStore, brandId: string, weekStart: str
   const existingDates = new Set(existing.flatMap((p) => p.targets.map((t) => (t.scheduled_at ? zonedParts(t.scheduled_at, brand.timezone).date : ""))).filter(Boolean));
   const built = buildWeek({ slots: timing.slots, dayRanking: timing.dayRanking, lanes, recycleCap: schedule.recycle_cap, skipped: new Set(planWeekRow?.skipped ?? []), existingCandidateIds: new Set(existing.map((p) => p.plan.candidate_id)), existingDates });
   return { ...built, timingSource: timing.source, slots: timing.slots, brand, schedule, recyclePool: lanes.recycle };
+}
+
+/** Last line of defence: callers normalise, but a non-Monday key would mis-place slots and double-book a week. */
+function assertMonday(weekStart: string): void {
+  if (normaliseWeekStart(weekStart) !== weekStart) throw new Error(`weekStart must be a Monday (got ${weekStart})`);
 }
 
 const meta = (weekStart: string, c: Candidate): PlanMeta => ({ week_start: weekStart, lane: c.lane, reason: c.reason, candidate_id: c.id, touched: false });
@@ -58,6 +63,7 @@ async function materialisePick(store: PlanStore, brandId: string, weekStart: str
 }
 
 export async function materialiseWeek(store: PlanStore, i: { brandId: string; weekStart: string; by: string; now?: Date }): Promise<{ created: number; emptyDays: string[]; summary: Record<Lane | "slots", number> }> {
+  assertMonday(i.weekStart);
   const now = i.now ?? new Date();
   const plan = await planWeek(store, i.brandId, i.weekStart, now);
   for (const pick of plan.picks) await materialisePick(store, i.brandId, i.weekStart, pick, i.by);
@@ -69,6 +75,7 @@ export async function materialiseWeek(store: PlanStore, i: { brandId: string; we
 const isUntouched = (p: PlannedPost) => !p.plan.touched && (p.status === "draft" || p.status === "pending_approval");
 
 export async function rebuildWeek(store: PlanStore, i: { brandId: string; weekStart: string; by: string; now?: Date }): Promise<{ removed: number; created: number }> {
+  assertMonday(i.weekStart);
   const existing = await store.listPlannedPosts(i.brandId, i.weekStart);
   let removed = 0;
   for (const p of existing) if (isUntouched(p)) { await store.discardPlannedPost(p.id); removed++; }

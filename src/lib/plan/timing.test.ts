@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveSlots, median, zonedParts } from "./timing";
+import { resolveSlots, median, zonedParts, normaliseWeekStart } from "./timing";
 import type { BrandSchedule, HistoryRow } from "./types";
 
 const TZ = "America/Los_Angeles";
@@ -31,6 +31,21 @@ describe("zonedParts", () => {
   it("returns brand-local weekday, hour and date", () => {
     expect(zonedParts("2026-06-01T22:30:00Z", TZ)).toEqual({ dow: 1, hour: 15, date: "2026-06-01" });
     expect(zonedParts("2026-06-02T06:30:00Z", TZ)).toEqual({ dow: 1, hour: 23, date: "2026-06-01" });
+  });
+});
+
+describe("normaliseWeekStart", () => {
+  it("snaps any date to the Monday of its week with calendar arithmetic only", () => {
+    expect(normaliseWeekStart("2026-09-14")).toBe("2026-09-14"); // Monday stays
+    expect(normaliseWeekStart("2026-09-20")).toBe("2026-09-14"); // Sunday belongs to the week that started the previous Monday
+    expect(normaliseWeekStart("2026-09-16")).toBe("2026-09-14"); // Wednesday
+    expect(normaliseWeekStart("2026-09-19")).toBe("2026-09-14"); // Saturday
+    expect(normaliseWeekStart("2026-01-01")).toBe("2025-12-29"); // crosses a year boundary
+  });
+  it("rejects anything that is not a YYYY-MM-DD date", () => {
+    expect(() => normaliseWeekStart("2026-9-14")).toThrow(/YYYY-MM-DD/);
+    expect(() => normaliseWeekStart("2026-02-30")).toThrow(/YYYY-MM-DD/);
+    expect(() => normaliseWeekStart("")).toThrow(/YYYY-MM-DD/);
   });
 });
 

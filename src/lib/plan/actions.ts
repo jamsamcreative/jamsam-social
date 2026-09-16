@@ -7,7 +7,7 @@ import { createSupabasePlanStore } from "./store";
 import { materialiseWeek, rebuildWeek, useInstead as swapForHistoryPost } from "./materialise";
 import { importHistoryChunk } from "./history-sync";
 import { approvePost } from "@/lib/posts/actions";
-import { zonedParts } from "./timing";
+import { zonedParts, normaliseWeekStart } from "./timing";
 import type { PlannedPost } from "./store";
 import type { ScheduleSlot } from "./types";
 
@@ -34,11 +34,11 @@ const NOT_SKIPPABLE = "Only planned posts that have not published can be skipped
 
 export async function buildWeekAction(brandId: string, weekStart: string): Promise<ActionResult<{ created: number; emptyDays: string[] }>> {
   const u = await user(); if (!u) return { ok: false, error: "Not signed in" };
-  return wrap(() => materialiseWeek(createSupabasePlanStore(), { brandId, weekStart, by: u.id }));
+  return wrap(() => materialiseWeek(createSupabasePlanStore(), { brandId, weekStart: normaliseWeekStart(weekStart), by: u.id }));
 }
 export async function rebuildWeekAction(brandId: string, weekStart: string): Promise<ActionResult<{ removed: number; created: number }>> {
   const u = await user(); if (!u) return { ok: false, error: "Not signed in" };
-  return wrap(() => rebuildWeek(createSupabasePlanStore(), { brandId, weekStart, by: u.id }));
+  return wrap(() => rebuildWeek(createSupabasePlanStore(), { brandId, weekStart: normaliseWeekStart(weekStart), by: u.id }));
 }
 export async function skipPlannedPostAction(postId: string): Promise<ActionResult> {
   if (!(await user())) return { ok: false, error: "Not signed in" };
@@ -77,13 +77,13 @@ export async function approveDayAction(brandId: string, weekStart: string, date:
     const store = createSupabasePlanStore();
     const brand = await store.getBrand(brandId);
     if (!brand) throw new Error("Brand not found");
-    const posts = (await store.listPlannedPosts(brandId, weekStart)).filter((p) => p.targets.some((t) => t.scheduled_at && zonedParts(t.scheduled_at, brand.timezone).date === date));
+    const posts = (await store.listPlannedPosts(brandId, normaliseWeekStart(weekStart))).filter((p) => p.targets.some((t) => t.scheduled_at && zonedParts(t.scheduled_at, brand.timezone).date === date));
     return approveEach(posts);
   });
 }
 export async function approveWeekAction(brandId: string, weekStart: string): Promise<ActionResult<{ approved: number; waiting: number }>> {
   if (!(await user())) return { ok: false, error: "Not signed in" };
-  return wrap(async () => approveEach(await createSupabasePlanStore().listPlannedPosts(brandId, weekStart)));
+  return wrap(async () => approveEach(await createSupabasePlanStore().listPlannedPosts(brandId, normaliseWeekStart(weekStart))));
 }
 
 const scheduleSchema = z.object({
