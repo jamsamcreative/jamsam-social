@@ -25,8 +25,20 @@ export function candidatePhrases(page: PageLite): string[] {
   if (page.focus_keyword) push(page.focus_keyword, true);
   push(page.title);
   push(page.title.split(/\s*[:–—-]\s+/)[0]);
-  const w = words(page.title).filter((x) => !FUNCTION_WORDS.has(x));
-  for (const n of [4, 3, 2]) for (let i = 0; i + n <= w.length; i++) push(w.slice(i, i + n).join(" "));
+  // n-grams must never span a removed function word: split into maximal runs
+  // of consecutive non-function words, then slide the window within each run.
+  const runs: string[][] = [];
+  let run: string[] = [];
+  for (const word of words(page.title)) {
+    if (FUNCTION_WORDS.has(word)) {
+      if (run.length) runs.push(run);
+      run = [];
+    } else {
+      run.push(word);
+    }
+  }
+  if (run.length) runs.push(run);
+  for (const r of runs) for (const n of [4, 3, 2]) for (let i = 0; i + n <= r.length; i++) push(r.slice(i, i + n).join(" "));
   return out;
 }
 

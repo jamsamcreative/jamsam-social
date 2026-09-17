@@ -15,6 +15,8 @@ describe("candidatePhrases", () => {
     expect(out).not.toContain("and turbine");
     expect(out).not.toContain("static and");
     expect(out).not.toContain("ridge static and");
+    expect(out).not.toContain("static turbine");
+    expect(out).not.toContain("ridge static turbine");
     expect(new Set(out).size).toBe(out.length);
     expect(out.every((s) => s.trim().split(/\s+/).length >= 2)).toBe(true);
   });
