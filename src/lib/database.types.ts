@@ -68,6 +68,7 @@ type SyncRunRow = { brand_id: string; source: string; last_run_at: string | null
 type SitePageRow = {
   id: string; brand_id: string; wp_id: number; type: string; slug: string; url: string; title: string; excerpt: string | null; focus_keyword: string | null;
   featured_image_url: string | null; modified_at: string | null; mirrored_at: string;
+  content_text: string | null; content_hash: string | null; word_count: number | null;
 };
 type KeywordRow = {
   id: string; brand_id: string; keyword: string; cluster: string | null; volume: number | null; difficulty: number | null; intent: string | null;
@@ -103,6 +104,12 @@ type PostCategoryRow = {
   id: string; brand_id: string; name: string; slug: string; target_share: number; description: string | null;
   sort_order: number; created_at: string;
 };
+type SiteLinkRow = { id: string; brand_id: string; from_page_id: string; to_page_id: string; href: string; anchor_text: string; scanned_at: string };
+type LinkSuggestionRow = {
+  id: string; brand_id: string; orphan_page_id: string; host_page_id: string | null; phrase: string | null; context: string | null;
+  status: "pending" | "approved" | "rejected" | "undone" | "stale" | "none"; reason: string | null; phrases_tried: string[];
+  href: string | null; undo_snippet: string | null; applied_at: string | null; applied_by: string | null; created_at: string; updated_at: string;
+};
 type Table<R, Req extends keyof R> = {
   Row: R;
   Insert: Pick<R, Req> & Partial<Omit<R, Req>>;
@@ -132,6 +139,8 @@ export type Database = {
       pin_boards: Table<PinBoardRow, "brand_id" | "board_id" | "name">;
       pins: Table<PinRow, "brand_id" | "board_id" | "title" | "description" | "image_url">;
       site_pages: Table<SitePageRow, "brand_id" | "wp_id" | "type" | "slug" | "url" | "title">;
+      site_links: Table<SiteLinkRow, "brand_id" | "from_page_id" | "to_page_id" | "href">;
+      link_suggestions: Table<LinkSuggestionRow, "brand_id" | "orphan_page_id">;
       keywords: Table<KeywordRow, "brand_id" | "keyword">;
       projects: Table<ProjectRow, "brand_id" | "title">;
       keyword_imports: Table<KeywordImportRow, "brand_id" | "kind">;
@@ -163,6 +172,7 @@ export type Database = {
       metric_source: MetricsDailyRow["source"];
       keyword_source: KeywordRow["source"];
       pin_status: PinRow["status"];
+      link_suggestion_status: LinkSuggestionRow["status"];
     };
     CompositeTypes: Record<string, never>;
   };

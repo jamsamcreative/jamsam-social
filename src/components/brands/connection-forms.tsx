@@ -13,7 +13,7 @@ export const FIELDS: Record<Provider, Field[]> = {
       name: "app_password",
       label: "Application password",
       secret: true,
-      help: "WP Admin → Users → Profile → Application Passwords. Leave blank to keep the saved one.",
+      help: "WP Admin → Users → Profile → Application Passwords. Use an Administrator's application password — internal-link edits are rejected if the user can't save unfiltered HTML. Leave blank to keep the saved one.",
     },
   ],
   meta: [
