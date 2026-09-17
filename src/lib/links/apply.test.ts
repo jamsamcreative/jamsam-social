@@ -34,6 +34,32 @@ describe("wrapPhrase", () => {
     expect(r.html).not.toContain(`"><script>`);
     expect(r.html).toContain(`&quot;`);
   });
+  it("never links inside shortcode attributes — the phrase in the block body is wrapped instead", () => {
+    const html = `[et_pb_blurb title="Pole Barn Kits" _builder_version="4.9"]<p>Our pole barn kits ship fast.</p>[/et_pb_blurb]`;
+    const r = wrapPhrase(html, "pole barn kits", HREF)!;
+    expect(r.html).toBe(`[et_pb_blurb title="Pole Barn Kits" _builder_version="4.9"]<p>Our <a href="${HREF}">pole barn kits</a> ship fast.</p>[/et_pb_blurb]`);
+  });
+  it("returns null when the phrase only appears in a shortcode attribute (even one containing a bracket)", () => {
+    expect(wrapPhrase(`[et_pb_blurb title="Pole Barn Kits"]<p>nothing</p>[/et_pb_blurb]`, "pole barn kits", HREF)).toBeNull();
+    expect(wrapPhrase(`[box title="[a] pole barn kits"]<p>nothing</p>[/box]`, "pole barn kits", HREF)).toBeNull();
+  });
+  it("does not leak an attribute value containing '>' into linkable text", () => {
+    expect(wrapPhrase(`<img alt="a > pole barn kits" src="/x.png"><p>nothing</p>`, "pole barn kits", HREF)).toBeNull();
+  });
+  it("still treats a tag with an unbalanced quote as a tag rather than text", () => {
+    const r = wrapPhrase(`<p data-x="oops>pole barn kits here</p>`, "pole barn kits", HREF)!;
+    expect(r.html).toBe(`<p data-x="oops><a href="${HREF}">pole barn kits</a> here</p>`);
+  });
+  it("never links inside option, textarea, button or title elements", () => {
+    expect(wrapPhrase(`<select><option>pole barn kits</option></select>`, "pole barn kits", HREF)).toBeNull();
+    expect(wrapPhrase(`<textarea>pole barn kits</textarea>`, "pole barn kits", HREF)).toBeNull();
+    expect(wrapPhrase(`<button type="submit">pole barn kits</button>`, "pole barn kits", HREF)).toBeNull();
+    expect(wrapPhrase(`<title>pole barn kits</title>`, "pole barn kits", HREF)).toBeNull();
+  });
+  it("still links plain text that sits between square brackets that are not shortcodes", () => {
+    const r = wrapPhrase(`<p>[1] pole barn kits [see note]</p>`, "pole barn kits", HREF)!;
+    expect(r.html).toBe(`<p>[1] <a href="${HREF}">pole barn kits</a> [see note]</p>`);
+  });
   it("returns null when an existing anchor to the same href has different text (does not add a second link)", () => {
     const html = `<p>Read our <a href="${HREF}">our pole barn kits guide</a> today.</p>`;
     expect(wrapPhrase(html, "pole barn kits", HREF)).toBeNull();

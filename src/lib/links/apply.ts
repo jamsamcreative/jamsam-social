@@ -1,9 +1,13 @@
 import { phraseRegex } from "./suggest";
 
-/** Split raw HTML into text segments that may be linked and protected segments (tags, comments, anchors, headings, code). */
+/**
+ * Split raw HTML into text segments that may be linked and protected segments: comments, anchors, headings, code-like and
+ * form/metadata elements (option, textarea, button, title), `[shortcode attr="…"]` open/close tags (attribute values may hold `]`),
+ * and any other tag (attribute values may hold `>`; a tag with an unbalanced quote still ends at the first `>`).
+ */
 function segments(html: string): { text: string; linkable: boolean }[] {
   const out: { text: string; linkable: boolean }[] = [];
-  const re = /<!--[\s\S]*?-->|<a\b[\s\S]*?<\/a>|<(h[1-6]|pre|code|script|style)\b[\s\S]*?<\/\1>|<[^>]+>/gi;
+  const re = /<!--[\s\S]*?-->|<a\b[\s\S]*?<\/a>|<(h[1-6]|pre|code|script|style|option|textarea|button|title)\b[\s\S]*?<\/\1>|\[\/?[a-zA-Z][\w-]*(?:\s(?:[^\]"']|"[^"]*"|'[^']*')*)?\]|<(?:[^>"']|"[^"]*"|'[^']*')*>|<[^>]+>/gi;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(html))) {
