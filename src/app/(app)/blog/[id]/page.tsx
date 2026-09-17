@@ -9,6 +9,7 @@ import { ArticleForm } from "@/components/articles/article-form";
 import { ArticleActions } from "@/components/articles/article-actions";
 import { ArticleStatusBadge } from "@/components/articles/status-badge";
 import { formatInZone } from "@/lib/time/zoned";
+import { GscStatus } from "@/components/articles/gsc-status";
 
 export const maxDuration = 300;
 
@@ -44,6 +45,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
                 </a>
               </>
             )}
+            <GscStatus articleId={article.id} submittedAt={article.gsc_submitted_at} formatted={article.gsc_submitted_at ? formatInZone(article.gsc_submitted_at, brand.timezone) : null} />
           </p>
           {article.last_error && <p className="text-sm text-destructive">Last error: {article.last_error}</p>}
         </div>
