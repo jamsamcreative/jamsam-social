@@ -49,6 +49,12 @@ export default async function ArticlesPage({ searchParams }: { searchParams: Pro
           <p className="text-sm text-muted-foreground">{brand.name}. Switch brands in the header.</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" nativeButton={false} render={<Link href="/blog/links" />}>
+            Internal links →
+          </Button>
+          <Button variant="outline" nativeButton={false} render={<Link href="/seo" />}>
+            Keywords &amp; SEMrush →
+          </Button>
           <NewFromBrief brandId={brand.id} defaultRunner={defaultRunner} />
           <Button nativeButton={false} render={<Link href="/blog/new" />}>
             New blog post
