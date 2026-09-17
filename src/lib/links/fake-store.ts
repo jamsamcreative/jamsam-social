@@ -29,6 +29,7 @@ export function fakeLinksStore(seed: { pages?: FakePage[]; brands?: { id: string
     async getBrand(id) { return brands.find((b) => b.id === id) ?? null; },
     async listActiveBrands() { return brands.map(({ id, slug, name }) => ({ id, slug, name })); },
     async listPages(brandId) { return store.pages.filter((p) => p.brand_id === brandId).map(omitBrand); },
+    async listPageMeta(brandId) { return store.pages.filter((p) => p.brand_id === brandId).map(({ id, type, slug, url, title }) => ({ id, type, slug, url, title })); },
     async getPage(id) { const p = store.pages.find((x) => x.id === id); return p ? omitBrand(p) : null; },
     async replaceEdges(brandId, edges) { store.edges = [...store.edges.filter((e) => e.brand_id !== brandId), ...edges.map((e) => ({ brand_id: brandId, ...e }))]; },
     async addEdge(brandId, edge) { store.edges.push({ brand_id: brandId, ...edge }); },

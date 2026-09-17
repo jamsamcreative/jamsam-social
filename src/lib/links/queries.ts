@@ -1,7 +1,6 @@
 import "server-only";
 import { UTILITY_SLUGS } from "./graph";
-import { createSupabaseLinksStore, type LinksStore, type LinkSuggestionRow } from "./store";
-import type { PageLite } from "./types";
+import { createSupabaseLinksStore, type LinksStore, type LinkSuggestionRow, type PageMeta } from "./store";
 
 export type LinksBrand = { id: string; slug: string; name: string };
 export type SuggestionCard = { id: string; orphanTitle: string; orphanUrl: string; hostTitle: string; hostUrl: string; phrase: string; context: string; brandName: string };
@@ -21,7 +20,7 @@ export type LinksPageData = {
 const newestFirst = (a: string, b: string) => b.localeCompare(a);
 
 /** Cards for one brand's rows, joining titles/urls from its `site_pages`. Rows whose pages have vanished from the mirror are skipped. */
-function cardsFor(brand: LinksBrand, rows: LinkSuggestionRow[], pages: PageLite[]): Pick<LinksPageData, "pending" | "none" | "added"> {
+function cardsFor(brand: LinksBrand, rows: LinkSuggestionRow[], pages: PageMeta[]): Pick<LinksPageData, "pending" | "none" | "added"> {
   const byId = new Map(pages.map((p) => [p.id, p]));
   const out: Pick<LinksPageData, "pending" | "none" | "added"> = { pending: [], none: [], added: [] };
   for (const r of rows) {
@@ -50,7 +49,7 @@ export async function getLinksPageData(brandSlug: string | null, store: LinksSto
   for (const brand of scope) {
     const [rows, pages, last, counts] = await Promise.all([
       store.listSuggestions(brand.id, ["pending", "none", "approved"]),
-      store.listPages(brand.id),
+      store.listPageMeta(brand.id),
       store.lastScan(brand.id),
       store.counts(brand.id),
     ]);

@@ -6,12 +6,15 @@ export type LinkSuggestionRow = Database["public"]["Tables"]["link_suggestions"]
 export type LinkSuggestionStatus = LinkSuggestionRow["status"];
 export type LinkSuggestionInsert = Database["public"]["Tables"]["link_suggestions"]["Insert"];
 export type PageWithHtml = PageLite & { content_html: string };
+export type PageMeta = Pick<PageLite, "id" | "type" | "slug" | "url" | "title">;
 
 export interface LinksStore {
   getBrand(brandId: string): Promise<{ id: string; slug: string; name: string; website_url: string | null } | null>;
   listActiveBrands(): Promise<{ id: string; slug: string; name: string }[]>;
   /** From site_pages; `content_text` is '' when the column is null (page mirrored before Phase 8). */
   listPages(brandId: string): Promise<PageLite[]>;
+  /** Identity + title only (no `content_text`) — what the review page needs to label cards. */
+  listPageMeta(brandId: string): Promise<PageMeta[]>;
   getPage(pageId: string): Promise<(PageLite & { wp_id: number }) | null>;
   replaceEdges(brandId: string, edges: LinkEdge[]): Promise<void>;
   addEdge(brandId: string, edge: LinkEdge): Promise<void>;
@@ -89,6 +92,11 @@ export function createSupabaseLinksStore(): LinksStore {
       const { data, error } = await admin.from("site_pages").select(PAGE_COLS).eq("brand_id", brandId).limit(5000);
       if (error) fail(error);
       return (data ?? []).map(toPage);
+    },
+    async listPageMeta(brandId) {
+      const { data, error } = await admin.from("site_pages").select("id,type,slug,url,title").eq("brand_id", brandId).limit(5000);
+      if (error) fail(error);
+      return (data ?? []).map((p) => ({ id: p.id, type: p.type === "page" ? ("page" as const) : ("post" as const), slug: p.slug, url: p.url, title: p.title }));
     },
     async getPage(pageId) {
       const { data, error } = await admin.from("site_pages").select(PAGE_COLS).eq("id", pageId).maybeSingle();
