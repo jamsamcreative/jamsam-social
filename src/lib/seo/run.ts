@@ -4,24 +4,29 @@ import { getConnectionWithSecret } from "@/lib/connections/queries";
 import { createWpClient } from "@/lib/wordpress/client";
 import type { WordpressConfig, WordpressSecret } from "@/lib/connections/wordpress-shared";
 import { createSupabaseStore, type Store } from "@/lib/ai/store";
-import { mirrorSite } from "./mirror";
+import { mirrorSite, type MirroredPage } from "./mirror";
+import { htmlToText, sha1 } from "@/lib/links/html";
 import { enrichFromGsc } from "./gsc-enrich";
 
-/** Mirror the brand's published WP pages into site_pages (replace-all semantics). */
-export async function mirrorBrandSite(brandId: string, store: Store = createSupabaseStore()): Promise<{ pages: number } | { error: string }> {
+/** Mirror the brand's published WP pages into site_pages (replace-all semantics). Body text is stored as `content_text`; the raw HTML is returned (not stored) so the link scan can build the graph. */
+export async function mirrorBrandSite(brandId: string, store: Store = createSupabaseStore()): Promise<{ pages: number; mirrored: MirroredPage[] } | { error: string }> {
   const conn = await getConnectionWithSecret<WordpressConfig, WordpressSecret>(brandId, "wordpress");
   if (!conn) return { error: "WordPress is not connected" };
   const admin = createAdminSupabase();
   try {
     const pages = await mirrorSite(createWpClient(conn.config, conn.secret));
     const now = new Date().toISOString();
-    for (let i = 0; i < pages.length; i += 200) {
-      const { error } = await admin.from("site_pages").upsert(pages.slice(i, i + 200).map((p) => ({ brand_id: brandId, ...p, mirrored_at: now })), { onConflict: "brand_id,type,wp_id" });
+    const rows = pages.map(({ content_html, ...p }) => {
+      const text = htmlToText(content_html);
+      return { brand_id: brandId, ...p, content_text: text, content_hash: sha1(text), word_count: text.split(/\s+/).filter(Boolean).length, mirrored_at: now };
+    });
+    for (let i = 0; i < rows.length; i += 200) {
+      const { error } = await admin.from("site_pages").upsert(rows.slice(i, i + 200), { onConflict: "brand_id,type,wp_id" });
       if (error) throw new Error(error.message);
     }
     await admin.from("site_pages").delete().eq("brand_id", brandId).lt("mirrored_at", now);
     await store.logImport(brandId, "site_mirror", conn.config.site_url, pages.length);
-    return { pages: pages.length };
+    return { pages: pages.length, mirrored: pages };
   } catch (e) {
     return { error: e instanceof Error ? e.message : String(e) };
   }
