@@ -3,17 +3,18 @@ import type { LinkEdge, Orphan, PageLite } from "./types";
 
 export const UTILITY_SLUGS = new Set(["privacy-policy", "privacy", "terms", "terms-of-service", "thank-you", "sitemap", "front-page", "home"]);
 
-export function buildEdges(pages: (PageLite & { content_html: string })[], siteOrigin: string): LinkEdge[] {
+/** Edges from every page's body links; `siteOrigins` lists each host the site answers on (see `normaliseUrl`). */
+export function buildEdges(pages: (PageLite & { content_html: string })[], siteOrigins: string | string[]): LinkEdge[] {
   const byUrl = new Map<string, string>();
   const bySlug = new Map<string, string>();
   for (const p of pages) {
-    const u = normaliseUrl(p.url, siteOrigin);
+    const u = normaliseUrl(p.url, siteOrigins);
     if (u) byUrl.set(u, p.id);
     bySlug.set(p.slug, p.id);
   }
   const edges: LinkEdge[] = [];
   for (const p of pages) {
-    for (const l of extractInternalLinks(p.content_html, siteOrigin)) {
+    for (const l of extractInternalLinks(p.content_html, siteOrigins)) {
       const slug = l.href.split("/").filter(Boolean).pop() ?? "";
       const to = byUrl.get(l.href) ?? bySlug.get(slug);
       if (!to || to === p.id) continue;

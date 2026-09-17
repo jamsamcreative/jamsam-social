@@ -46,9 +46,28 @@ describe("scanBrand", () => {
     expect((await store.listEdges(BRAND.id)).map((e) => e.from_page_id + ">" + e.to_page_id)).toEqual(["a>b"]);
   });
 
-  it("falls back to the first mirrored page's origin when the brand has no website_url", async () => {
+  it("uses the first mirrored page's origin alone when the brand has no website_url", async () => {
     const store = fakeLinksStore({ pages: seed().pages, brands: [{ ...BRAND, website_url: null }] });
     const out = await scanBrand(store, { brandId: BRAND.id, userId: null, mirror: async () => ({ pages: 3, mirrored: mirrored(store) }) });
+    expect(out).toMatchObject({ links: 1, orphans: 2 });
+  });
+
+  it("builds edges when the brand's website_url differs from the host the mirrored pages and body links use", async () => {
+    const wpHost = "https://acme.wpenginepowered.com";
+    const pages = seed().pages.map((p) => ({ ...p, url: `${wpHost}/${p.id}` }));
+    const store = fakeLinksStore({ pages, brands: [{ ...BRAND, website_url: "https://acme.com" }] });
+    const mirror: ScanMirror = async () => ({ pages: 3, mirrored: store.pages.map((p) => ({ wp_id: p.wp_id, type: p.type, url: p.url, content_html: p.id === "a" ? `<p><a href="${wpHost}/b">B</a></p>` : "<p>plain</p>" })) });
+    const out = await scanBrand(store, { brandId: BRAND.id, userId: null, mirror });
+    expect(out).toMatchObject({ links: 1, orphans: 2 });
+    expect((await store.listEdges(BRAND.id)).map((e) => e.from_page_id + ">" + e.to_page_id)).toEqual(["a>b"]);
+  });
+
+  it("resolves body links written with the brand's public host when the mirror uses another host", async () => {
+    const wpHost = "https://acme.wpenginepowered.com";
+    const pages = seed().pages.map((p) => ({ ...p, url: `${wpHost}/${p.id}` }));
+    const store = fakeLinksStore({ pages, brands: [{ ...BRAND, website_url: "https://acme.com" }] });
+    const mirror: ScanMirror = async () => ({ pages: 3, mirrored: store.pages.map((p) => ({ wp_id: p.wp_id, type: p.type, url: p.url, content_html: p.id === "a" ? `<p><a href="https://acme.com/b">B</a></p>` : "<p>plain</p>" })) });
+    const out = await scanBrand(store, { brandId: BRAND.id, userId: null, mirror });
     expect(out).toMatchObject({ links: 1, orphans: 2 });
   });
 

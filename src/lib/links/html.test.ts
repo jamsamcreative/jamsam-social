@@ -20,12 +20,24 @@ describe("normaliseUrl", () => {
     expect(normaliseUrl("//acme.com/kits", ORIGIN)).toBe("https://acme.com/kits");
     expect(normaliseUrl("http://www.acme.com/kits/", ORIGIN)).toBe("https://acme.com/kits");
   });
+  it("accepts any of several allowed hosts and canonicalises onto the first", () => {
+    const origins = ["https://acme.com", "https://acme.wpenginepowered.com"];
+    expect(normaliseUrl("https://acme.wpenginepowered.com/horse-barns/", origins)).toBe("https://acme.com/horse-barns");
+    expect(normaliseUrl("https://acme.com/kits", origins)).toBe("https://acme.com/kits");
+    expect(normaliseUrl("/kits", origins)).toBe("https://acme.com/kits");
+    expect(normaliseUrl("https://other.com/kits", origins)).toBeNull();
+  });
   it("rejects external, mailto, tel, fragment-only and media links", () => {
     for (const h of ["https://other.com/x", "mailto:a@b.c", "tel:123", "#top", "/wp-content/uploads/a.jpg", "/files/spec.pdf"]) expect(normaliseUrl(h, ORIGIN)).toBeNull();
   });
 });
 
 describe("extractInternalLinks", () => {
+  it("resolves anchors written with an alternate host", () => {
+    const html = `<a href="https://acme.wpenginepowered.com/kits/">kits</a>`;
+    expect(extractInternalLinks(html, [ORIGIN, "https://acme.wpenginepowered.com"])).toEqual([{ href: "https://acme.com/kits", anchorText: "kits" }]);
+  });
+
   it("returns internal anchors with their text, in order, skipping external ones", () => {
     const html = `<p>See <a href="/horse-barns/">horse barns</a> and <a href="https://other.com">this</a>, or <a class="x" href='https://acme.com/kits#a'><em>kits</em></a>.</p>`;
     expect(extractInternalLinks(html, ORIGIN)).toEqual([

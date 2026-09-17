@@ -27,9 +27,11 @@ export async function scanBrand(store: LinksStore, i: { brandId: string; userId:
   const html = new Map(m.mirrored.map((p) => [`${p.type}:${p.wp_id}`, p.content_html]));
   const pages: PageWithHtml[] = (await store.listPages(i.brandId)).map((p) => ({ ...p, content_html: html.get(`${p.type}:${p.wp_id}`) ?? "" }));
 
+  // The mirrored page url is what body links are actually written with (e.g. a hosting subdomain); the brand's public
+  // website_url is accepted as an alternate host so links written either way resolve.
   const brand = await store.getBrand(i.brandId);
-  const siteOrigin = originOf(brand?.website_url) ?? originOf(m.mirrored[0]?.url);
-  const edges = siteOrigin ? buildEdges(pages, siteOrigin) : [];
+  const siteOrigins = [...new Set([originOf(m.mirrored[0]?.url), originOf(brand?.website_url)].filter((o): o is string => !!o))];
+  const edges = siteOrigins.length ? buildEdges(pages, siteOrigins) : [];
   await store.replaceEdges(i.brandId, edges);
 
   const orphans = findOrphans(pages, edges);

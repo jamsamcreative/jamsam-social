@@ -18,6 +18,22 @@ describe("buildEdges", () => {
   });
 });
 
+describe("buildEdges with several site hosts", () => {
+  it("resolves a body link written with the alternate host to the page's canonical url", () => {
+    const pages = [
+      pg("a", "horse-barns", { content_html: `<a href="https://acme.wpenginepowered.com/pole-barns/">pole</a>` }),
+      pg("b", "pole-barns"),
+    ];
+    expect(buildEdges(pages, [ORIGIN, "https://acme.wpenginepowered.com"])).toEqual([
+      { from_page_id: "a", to_page_id: "b", href: "https://acme.com/pole-barns", anchor_text: "pole" },
+    ]);
+  });
+  it("still accepts a single origin string", () => {
+    const pages = [pg("a", "horse-barns", { content_html: `<a href="/pole-barns/">pole</a>` }), pg("b", "pole-barns")];
+    expect(buildEdges(pages, ORIGIN)).toHaveLength(1);
+  });
+});
+
 describe("findOrphans", () => {
   it("returns pages with no inbound edge from a different page, utility pages last", () => {
     const pages = [pg("a", "horse-barns"), pg("b", "pole-barns"), pg("p", "privacy-policy", { type: "page" }), pg("h", "kits")];

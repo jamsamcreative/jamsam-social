@@ -28,28 +28,34 @@ export function sha1(text: string): string {
   return createHash("sha1").update(text).digest("hex");
 }
 
-/** Canonical https://host/path for an internal link; null when it is not a page on this site. */
-export function normaliseUrl(href: string, siteOrigin: string): string | null {
+/**
+ * Canonical https://host/path for an internal link; null when it is not a page on this site.
+ * `siteOrigins` may list several hosts the site answers on (public domain, hosting subdomain); a link on any of them is
+ * internal, and the output is always written on the first.
+ */
+export function normaliseUrl(href: string, siteOrigins: string | string[]): string | null {
+  const origins = (Array.isArray(siteOrigins) ? siteOrigins : [siteOrigins]).filter(Boolean);
+  if (!origins.length) return null;
   const h = href.trim();
   if (!h || /^(mailto:|tel:|javascript:|#)/i.test(h)) return null;
   let u: URL;
   try {
-    u = new URL(h.startsWith("//") ? `https:${h}` : h, siteOrigin);
+    u = new URL(h.startsWith("//") ? `https:${h}` : h, origins[0]);
   } catch { return null; }
-  const origin = new URL(siteOrigin);
   const host = (x: string) => x.replace(/^www\./, "").toLowerCase();
-  if (host(u.hostname) !== host(origin.hostname)) return null;
+  const canonical = host(new URL(origins[0]).hostname);
+  if (!origins.some((o) => host(u.hostname) === host(new URL(o).hostname))) return null;
   const path = u.pathname.replace(/\/+$/, "");
   if (MEDIA_EXT.test(path) || /^\/wp-content\//.test(path)) return null;
-  return `https://${host(origin.hostname)}${path}`;
+  return `https://${canonical}${path}`;
 }
 
-export function extractInternalLinks(html: string, siteOrigin: string): { href: string; anchorText: string }[] {
+export function extractInternalLinks(html: string, siteOrigins: string | string[]): { href: string; anchorText: string }[] {
   const out: { href: string; anchorText: string }[] = [];
   const re = /<a\b[^>]*?\shref\s*=\s*(?:"([^"]*)"|'([^']*)')[^>]*>([\s\S]*?)<\/a>/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(html))) {
-    const href = normaliseUrl(m[1] ?? m[2] ?? "", siteOrigin);
+    const href = normaliseUrl(m[1] ?? m[2] ?? "", siteOrigins);
     if (href) out.push({ href, anchorText: htmlToText(m[3]) });
   }
   return out;
