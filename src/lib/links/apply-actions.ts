@@ -21,6 +21,7 @@ export async function approveSuggestion(store: LinksStore, i: { id: string; user
   if (!s.host_page_id || !s.phrase) return { ok: false, error: "Suggestion has no host or phrase" };
   const [host, orphan] = await Promise.all([store.getPage(s.host_page_id), store.getPage(s.orphan_page_id)]);
   if (!host || !orphan) return { ok: false, error: "The host or orphan page is no longer mirrored — rescan" };
+  if (host.type !== "post") return { ok: false, error: "Links are only written into blog posts" }; // the WP write path is /wp/v2/posts
   try {
     const raw = await i.wp.getRaw(host.wp_id);
     const wrapped = wrapPhrase(raw, s.phrase, orphan.url);

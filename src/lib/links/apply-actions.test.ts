@@ -72,6 +72,17 @@ describe("approveSuggestion", () => {
     expect((await store.getSuggestion("s1"))!.status).toBe("rejected");
   });
 
+  it("refuses a host that is not a blog post before touching WordPress", async () => {
+    const store = seed();
+    store.pages[0] = { ...store.pages[0], type: "page" };
+    const wp = fakeWp({ 7: HOST_HTML });
+    const getRaw = vi.spyOn(wp, "getRaw");
+    expect(await approveSuggestion(store, { id: "s1", userId: "u1", wp })).toEqual({ ok: false, error: "Links are only written into blog posts" });
+    expect(getRaw).not.toHaveBeenCalled();
+    expect(wp.update).not.toHaveBeenCalled();
+    expect((await store.getSuggestion("s1"))!.status).toBe("pending");
+  });
+
   it("leaves the suggestion pending when the WordPress write fails", async () => {
     const store = seed();
     const wp = fakeWp({ 7: HOST_HTML });
@@ -100,6 +111,20 @@ describe("undoSuggestion", () => {
     const wp = fakeWp({ 7: HOST_HTML });
     expect(await undoSuggestion(store, { id: "s1", userId: "u1", wp })).toEqual({ ok: false, error: "Only approved links can be undone" });
     expect(wp.update).not.toHaveBeenCalled();
+  });
+
+  it("keeps the row approved and the edge in place when the WordPress write fails", async () => {
+    const store = seed();
+    const wp = fakeWp({ 7: HOST_HTML });
+    await approveSuggestion(store, { id: "s1", userId: "u1", wp });
+    const linked = wp.posts.get(7);
+    wp.update.mockRejectedValueOnce(new Error("WordPress responded 500"));
+
+    expect(await undoSuggestion(store, { id: "s1", userId: "u1", wp })).toEqual({ ok: false, error: "WordPress responded 500" });
+
+    expect(wp.posts.get(7)).toBe(linked);
+    expect((await store.getSuggestion("s1"))!.status).toBe("approved");
+    expect(await store.listEdges(BRAND.id)).toEqual([{ from_page_id: "b", to_page_id: "c", href: ORPHAN_URL, anchor_text: "horse barns" }]);
   });
 
   it("still marks the link undone when someone already removed it from the post by hand", async () => {
