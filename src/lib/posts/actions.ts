@@ -38,7 +38,7 @@ async function loadPostForAction(id: string): Promise<Loaded> {
 function refresh() {
   revalidatePath("/posts", "layout");
   revalidatePath("/calendar");
-  revalidatePath("/dashboard");
+  revalidatePath("/brands/[slug]", "page");
 }
 
 export async function savePost(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {

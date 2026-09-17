@@ -25,5 +25,5 @@ export async function choosePage(slug: string, pageId: string): Promise<void> {
 export async function disconnectMeta(brandId: string, slug: string): Promise<void> {
   await disconnect(brandId);
   revalidatePath(`/brands/${slug}/connections`);
-  revalidatePath("/dashboard");
+  revalidatePath("/brands/[slug]", "page");
 }

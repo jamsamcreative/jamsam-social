@@ -109,6 +109,6 @@ export async function saveAndTestConnection(
 
   const result = await runConnectionTest(saved.id);
   revalidatePath(`/brands`, "layout");
-  revalidatePath("/dashboard");
+  revalidatePath("/brands/[slug]", "page");
   return result;
 }

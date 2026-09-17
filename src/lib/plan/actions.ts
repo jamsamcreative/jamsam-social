@@ -22,7 +22,7 @@ function refresh() {
   revalidatePath("/plan");
   revalidatePath("/posts", "layout");
   revalidatePath("/calendar");
-  revalidatePath("/dashboard");
+  revalidatePath("/brands/[slug]", "page");
 }
 const wrap = async <T,>(fn: () => Promise<T>): Promise<ActionResult<T>> => {
   try { const data = await fn(); refresh(); return { ok: true, data }; } catch (e) { return { ok: false, error: e instanceof Error ? e.message : String(e) }; }

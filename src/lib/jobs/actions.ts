@@ -11,7 +11,7 @@ export type ActionResult = { ok: true; id?: string } | { ok: false; error: strin
 
 function refresh() {
   revalidatePath("/jobs");
-  revalidatePath("/dashboard");
+  revalidatePath("/brands/[slug]", "page");
 }
 
 export async function enqueueJob(args: { brandId: string; type: JobType; input: unknown; runner?: JobRunner }): Promise<ActionResult> {
