@@ -6,7 +6,7 @@ import { buildBrief } from "@/lib/ai/brief";
 import type { Keyword, SitePage } from "@/lib/ai/store";
 
 const kw = (o: Partial<Keyword>): Keyword => ({ id: "k", brand_id: BRAND.id, keyword: "x", cluster: null, volume: null, difficulty: null, intent: null, competitor: null, competitor_position: null, our_position: null, our_impressions: null, our_clicks: null, our_page: null, source: "csv", notes: null, imported_at: "2026-09-01T00:00:00Z", refreshed_at: null, ...o });
-const pg = (o: Partial<SitePage>): SitePage => ({ id: "p", brand_id: BRAND.id, wp_id: 1, type: "post", slug: "horse-barns", url: "https://acme.com/horse-barns/", title: "Horse Barns: Sizes", excerpt: null, focus_keyword: "horse barns", featured_image_url: null, modified_at: null, mirrored_at: "2026-09-10T00:00:00Z", ...o });
+const pg = (o: Partial<SitePage>): SitePage => ({ id: "p", brand_id: BRAND.id, wp_id: 1, type: "post", slug: "horse-barns", url: "https://acme.com/horse-barns/", title: "Horse Barns: Sizes", excerpt: null, focus_keyword: "horse barns", featured_image_url: null, modified_at: null, mirrored_at: "2026-09-10T00:00:00Z", content_text: null, content_hash: null, word_count: null, ...o });
 const ctx = (store = fakeStore()) => ({ store, actor: { kind: "in_app" as const } });
 
 describe("seo tools", () => {
