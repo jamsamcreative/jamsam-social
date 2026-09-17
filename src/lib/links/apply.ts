@@ -15,16 +15,28 @@ function segments(html: string): { text: string; linkable: boolean }[] {
   return out;
 }
 
+/** Escape a value for safe use inside a double-quoted HTML attribute. */
+function escapeAttr(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+}
+
 export function wrapPhrase(rawHtml: string, phrase: string, href: string): { html: string; snippet: string } | null {
   const re = phraseRegex(phrase);
-  const existing = new RegExp(`<a href="${href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}">([^<]*)</a>`, "i").exec(rawHtml);
-  if (existing && re.test(existing[1])) return { html: rawHtml, snippet: existing[0] };
+  const escapedHref = escapeAttr(href);
+  const hrefPattern = escapedHref.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const existing = new RegExp(`<a href="${hrefPattern}">([^<]*)</a>`, "i").exec(rawHtml);
+  if (existing) {
+    const m = re.exec(existing[1]);
+    const isExact = m !== null && m.index === 0 && m[0].length === existing[1].length;
+    if (isExact) return { html: rawHtml, snippet: existing[0] };
+    return null;
+  }
   const segs = segments(rawHtml);
   for (const s of segs) {
     if (!s.linkable) continue;
     const m = re.exec(s.text);
     if (!m) continue;
-    const snippet = `<a href="${href}">${m[0]}</a>`;
+    const snippet = `<a href="${escapedHref}">${m[0]}</a>`;
     s.text = s.text.slice(0, m.index) + snippet + s.text.slice(m.index + m[0].length);
     return { html: segs.map((x) => x.text).join(""), snippet };
   }
@@ -34,5 +46,5 @@ export function wrapPhrase(rawHtml: string, phrase: string, href: string): { htm
 export function unwrapSnippet(rawHtml: string, snippet: string): string | null {
   if (!rawHtml.includes(snippet)) return null;
   const inner = snippet.replace(/^<a [^>]*>/, "").replace(/<\/a>$/, "");
-  return rawHtml.replace(snippet, inner);
+  return rawHtml.replace(snippet, () => inner);
 }

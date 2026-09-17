@@ -22,6 +22,27 @@ describe("wrapPhrase", () => {
     const r = wrapPhrase(`<p>pole  barn\nkits here</p>`, "pole barn kits", HREF)!;
     expect(r.html).toBe(`<p><a href="${HREF}">pole  barn\nkits</a> here</p>`);
   });
+  it("escapes the href attribute and stays idempotent against the escaped form", () => {
+    const href = "https://acme.com/x?a=1&b=2";
+    const r = wrapPhrase(`<p>pole barn kits here</p>`, "pole barn kits", href)!;
+    expect(r.html).toBe(`<p><a href="https://acme.com/x?a=1&amp;b=2">pole barn kits</a> here</p>`);
+    expect(wrapPhrase(r.html, "pole barn kits", href)).toEqual({ html: r.html, snippet: r.snippet });
+  });
+  it("does not let a quote in href break out of the attribute", () => {
+    const href = `https://acme.com/"><script>alert(1)</script>`;
+    const r = wrapPhrase(`<p>pole barn kits here</p>`, "pole barn kits", href)!;
+    expect(r.html).not.toContain(`"><script>`);
+    expect(r.html).toContain(`&quot;`);
+  });
+  it("returns null when an existing anchor to the same href has different text (does not add a second link)", () => {
+    const html = `<p>Read our <a href="${HREF}">our pole barn kits guide</a> today.</p>`;
+    expect(wrapPhrase(html, "pole barn kits", HREF)).toBeNull();
+  });
+  it("is idempotent only when the existing anchor's text exactly matches the phrase", () => {
+    const html = `<p>Our <a href="${HREF}">Pole barn kits</a> ship.</p>`;
+    const r = wrapPhrase(html, "pole barn kits", HREF)!;
+    expect(r).toEqual({ html, snippet: `<a href="${HREF}">Pole barn kits</a>` });
+  });
 });
 
 describe("unwrapSnippet", () => {
@@ -29,5 +50,10 @@ describe("unwrapSnippet", () => {
     const html = `<p>Our <a href="${HREF}">Pole barn kits</a> ship.</p>`;
     expect(unwrapSnippet(html, `<a href="${HREF}">Pole barn kits</a>`)).toBe(`<p>Our Pole barn kits ship.</p>`);
     expect(unwrapSnippet(`<p>edited</p>`, `<a href="${HREF}">Pole barn kits</a>`)).toBeNull();
+  });
+  it("does not interpret $ replacement patterns in the anchor text", () => {
+    const snippet = `<a href="${HREF}">costs $5 & $& more</a>`;
+    const html = `<p>It ${snippet} today.</p>`;
+    expect(unwrapSnippet(html, snippet)).toBe(`<p>It costs $5 & $& more today.</p>`);
   });
 });
