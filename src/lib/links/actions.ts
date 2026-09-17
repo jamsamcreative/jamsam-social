@@ -2,11 +2,12 @@
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getConnectionWithSecret } from "@/lib/connections/queries";
-import { createWpClient, updatePost } from "@/lib/wordpress/client";
+import { createWpClient } from "@/lib/wordpress/client";
 import type { WordpressConfig, WordpressSecret } from "@/lib/connections/wordpress-shared";
 import { createSupabaseLinksStore } from "./store";
 import { scanBrand } from "./scan";
 import { approveSuggestion, rejectSuggestion, undoSuggestion, type ApplyResult, type WpAdapter } from "./apply-actions";
+import { wpAdapterFor } from "./wp-adapter";
 
 export type ActionResult<T = undefined> = { ok: true; data?: T; message?: string } | { ok: false; error: string };
 /** One line per brand scanned; `ok` false carries the mirror/scan error in `message`. */
@@ -21,19 +22,11 @@ function refresh() {
   revalidatePath("/blog/links");
   revalidatePath("/blog");
 }
-/** The brand's WordPress connection as the two calls approve/undo need: raw post content (`context=edit`) and a content update. */
+/** The brand's WordPress connection as the adapter approve/undo need. */
 async function wpFor(brandId: string): Promise<WpAdapter> {
   const conn = await getConnectionWithSecret<WordpressConfig, WordpressSecret>(brandId, "wordpress");
   if (!conn) throw new Error("WordPress is not connected");
-  const client = createWpClient(conn.config, conn.secret);
-  return {
-    async getRaw(wpId) {
-      const { data } = await client.get<{ content: { raw: string } }>(`/wp/v2/posts/${wpId}`, { context: "edit", _fields: "id,content" });
-      if (typeof data?.content?.raw !== "string") throw new Error("WordPress did not return the post content");
-      return data.content.raw;
-    },
-    async update(wpId, content) { await updatePost(client, wpId, { content }); },
-  };
+  return wpAdapterFor(createWpClient(conn.config, conn.secret));
 }
 
 /** Scan one brand, or every active brand in sequence when `brandId` is `"all"`; one message per brand. Fails only when nothing could be scanned. */

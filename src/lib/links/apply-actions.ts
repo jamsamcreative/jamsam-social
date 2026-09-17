@@ -1,7 +1,7 @@
 import { unwrapSnippet, wrapPhrase } from "./apply";
 import type { LinksStore } from "./store";
 
-/** The two WordPress calls approve/undo need; `actions.ts` builds it from the brand's connection, tests inject an in-memory map. */
+/** The two WordPress calls approve/undo need; `wp-adapter.ts` builds it over a WpClient, tests inject an in-memory map. */
 export type WpAdapter = { getRaw(wpId: number): Promise<string>; update(wpId: number, content: string): Promise<void> };
 export type ApplyResult = { ok: true; message?: string } | { ok: false; error: string; stale?: boolean };
 

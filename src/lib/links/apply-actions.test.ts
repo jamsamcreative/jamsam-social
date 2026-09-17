@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { approveSuggestion, rejectSuggestion, undoSuggestion, type WpAdapter } from "./apply-actions";
 import { BRAND, fakeLinksStore, page } from "./fake-store";
 import type { LinkSuggestionRow } from "./store";
+import { ALTERED_ON_SAVE } from "./wp-adapter";
 
 const HOST_HTML = `<!-- wp:paragraph --><p>Our horse barns are sturdy. Beta is here.</p><!-- /wp:paragraph -->`;
 const ORPHAN_URL = "https://acme.com/horse-barns/";
@@ -89,6 +90,17 @@ describe("approveSuggestion", () => {
     wp.update.mockRejectedValueOnce(new Error("WordPress responded 500"));
     expect(await approveSuggestion(store, { id: "s1", userId: "u1", wp })).toEqual({ ok: false, error: "WordPress responded 500" });
     expect((await store.getSuggestion("s1"))!.status).toBe("pending");
+    expect(await store.listEdges(BRAND.id)).toEqual([]);
+  });
+
+  it("leaves the suggestion pending and surfaces the error when WordPress altered the content on save (wp_kses)", async () => {
+    const store = seed();
+    const wp = fakeWp({ 7: HOST_HTML });
+    wp.update.mockRejectedValueOnce(new Error(ALTERED_ON_SAVE));
+    expect(await approveSuggestion(store, { id: "s1", userId: "u1", wp })).toEqual({ ok: false, error: ALTERED_ON_SAVE });
+    const s = (await store.getSuggestion("s1"))!;
+    expect(s.status).toBe("pending");
+    expect(s.undo_snippet).toBeNull();
     expect(await store.listEdges(BRAND.id)).toEqual([]);
   });
 });
