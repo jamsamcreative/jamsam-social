@@ -13,6 +13,8 @@ describe("candidatePhrases", () => {
     expect(out).toContain("turbine options");
     expect(out).toContain("ridge static");
     expect(out).not.toContain("and turbine");
+    expect(out).not.toContain("static and");
+    expect(out).not.toContain("ridge static and");
     expect(new Set(out).size).toBe(out.length);
     expect(out.every((s) => s.trim().split(/\s+/).length >= 2)).toBe(true);
   });
@@ -26,6 +28,7 @@ describe("phraseRegex / contextFor", () => {
     expect(phraseRegex("pole barn").test("A Pole Barn is cheap.")).toBe(true);
     expect(phraseRegex("pole barn").test("Tadpole barnacle")).toBe(false);
     expect(contextFor("Intro here. Our pole barn kits ship fast. Later text.", "pole barn")).toBe("Our pole barn kits ship fast.");
+    expect(contextFor("Need kits? Our pole barn kits ship fast! Later.", "pole barn kits")).toBe("Our pole barn kits ship fast!");
   });
 });
 
