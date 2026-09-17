@@ -46,6 +46,13 @@ describe("fakeLinksStore.upsertScanResults", () => {
     expect(left[0]).toMatchObject({ orphan_page_id: "o3", status: "approved", href: "https://acme.com/o3", applied_by: "u1" });
   });
 
+  it("ignores results whose orphan is not in orphanIds", async () => {
+    const s = fakeLinksStore({ pages: [page("o1"), page("o2"), page("h1")] });
+    const r = await s.upsertScanResults(B, [sug("o1", "h1", "pole barn"), sug("o2", "h1", "shop plans"), none("h1")], ["o1"]);
+    expect(r).toEqual({ created: 1, staled: 0, removed: 0 });
+    expect((await s.listSuggestions(B)).map((x) => x.orphan_page_id)).toEqual(["o1"]);
+  });
+
   it("stales a pending row when the orphan now gets a none verdict", async () => {
     const s = fakeLinksStore({ pages: [page("o1"), page("h1")] });
     await s.upsertScanResults(B, [sug("o1", "h1", "pole barn")], ["o1"]);

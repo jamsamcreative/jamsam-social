@@ -40,12 +40,12 @@ export type ScanPlan = { keepIds: string[]; staleIds: string[]; deleteIds: strin
  * - a pending row with the same host+phrase as the new suggestion for that orphan is kept as-is (no new row);
  * - any other pending row for a still-orphan page → `stale` (`staled`) — its host/phrase changed or it now has a `none` verdict;
  * - a `none` row for a still-orphan page is replaced by the new outcome;
- * - every result without a kept twin is inserted as a fresh pending/none row (`created`).
+ * - every result for a listed orphan without a kept twin is inserted as a fresh pending/none row (`created`); results for pages not in `orphanIds` are ignored.
  */
 export function planScanUpsert(existing: Pick<LinkSuggestionRow, "id" | "orphan_page_id" | "host_page_id" | "phrase" | "status">[], results: (Suggestion | NoneVerdict)[], orphanIds: string[]): ScanPlan {
   const orphans = new Set(orphanIds);
   const byOrphan = new Map<string, Suggestion | NoneVerdict>();
-  for (const r of results) byOrphan.set(r.orphan_page_id, r);
+  for (const r of results) if (orphans.has(r.orphan_page_id)) byOrphan.set(r.orphan_page_id, r); // results for non-orphans are ignored
   const plan: ScanPlan = { keepIds: [], staleIds: [], deleteIds: [], inserts: [], created: 0, staled: 0, removed: 0 };
   const kept = new Set<string>();
   for (const row of existing) {
@@ -76,7 +76,8 @@ export function createSupabaseLinksStore(): LinksStore {
   const admin = createAdminSupabase();
   return {
     async getBrand(brandId) {
-      const { data } = await admin.from("brands").select("id,slug,name,website_url").eq("id", brandId).maybeSingle();
+      const { data, error } = await admin.from("brands").select("id,slug,name,website_url").eq("id", brandId).maybeSingle();
+      if (error) fail(error);
       return data ?? null;
     },
     async listActiveBrands() {
@@ -90,7 +91,8 @@ export function createSupabaseLinksStore(): LinksStore {
       return (data ?? []).map(toPage);
     },
     async getPage(pageId) {
-      const { data } = await admin.from("site_pages").select(PAGE_COLS).eq("id", pageId).maybeSingle();
+      const { data, error } = await admin.from("site_pages").select(PAGE_COLS).eq("id", pageId).maybeSingle();
+      if (error) fail(error);
       return data ? toPage(data) : null;
     },
     async replaceEdges(brandId, edges) {
@@ -123,7 +125,8 @@ export function createSupabaseLinksStore(): LinksStore {
       return data ?? [];
     },
     async getSuggestion(id) {
-      const { data } = await admin.from("link_suggestions").select("*").eq("id", id).maybeSingle();
+      const { data, error } = await admin.from("link_suggestions").select("*").eq("id", id).maybeSingle();
+      if (error) fail(error);
       return data ?? null;
     },
     async rejectedKeys(brandId, orphanId) {
@@ -158,7 +161,8 @@ export function createSupabaseLinksStore(): LinksStore {
       if (error) fail(error);
     },
     async lastScan(brandId) {
-      const { data } = await admin.from("keyword_imports").select("created_at").eq("brand_id", brandId).eq("kind", "link_scan").order("created_at", { ascending: false }).limit(1).maybeSingle();
+      const { data, error } = await admin.from("keyword_imports").select("created_at").eq("brand_id", brandId).eq("kind", "link_scan").order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (error) fail(error);
       return data?.created_at ?? null;
     },
     async counts(brandId) {

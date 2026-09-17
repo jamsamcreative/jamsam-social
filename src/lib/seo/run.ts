@@ -57,7 +57,10 @@ export async function runSeoCycle(): Promise<Record<string, { mirror?: unknown; 
   const store = createSupabaseStore();
   for (const r of data ?? []) {
     out[r.brand_id] ??= {};
-    if (r.provider === "wordpress") out[r.brand_id].mirror = await mirrorBrandSite(r.brand_id, store);
+    if (r.provider === "wordpress") {
+      const m = await mirrorBrandSite(r.brand_id, store);
+      out[r.brand_id].mirror = "error" in m ? m : { pages: m.pages }; // never serialise `mirrored` (every page's HTML) into the cron response
+    }
     if (r.provider === "search_console") out[r.brand_id].gsc = await enrichBrandFromGsc(r.brand_id, store);
   }
   return out;
