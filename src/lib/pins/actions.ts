@@ -32,7 +32,7 @@ async function load(id: string): Promise<Loaded> {
 function refresh() {
   revalidatePath("/pins", "layout");
   revalidatePath("/calendar");
-  revalidatePath("/dashboard");
+  revalidatePath("/brands/[slug]", "page");
 }
 
 export async function savePin(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {

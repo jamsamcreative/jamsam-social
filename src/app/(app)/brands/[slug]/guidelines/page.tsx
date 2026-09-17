@@ -16,7 +16,9 @@ export default async function GuidelinesPage({ params }: { params: Promise<{ slu
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">{brand.name}</h1>
+      <h1 className="text-2xl font-semibold">
+        {brand.name} <span className="text-muted-foreground">· Settings</span>
+      </h1>
       <BrandNav slug={brand.slug} />
       <Tabs defaultValue={GUIDELINE_KINDS[0].kind} className="max-w-4xl">
         <TabsList>

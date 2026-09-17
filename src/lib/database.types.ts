@@ -40,7 +40,7 @@ type ArticleRow = {
   featured_media: Json | null; categories: Json; tags: Json; decision: "new" | "rewrite" | "optimize"; rationale: string | null;
   source: "manual" | "ai"; status: "draft" | "pushed_to_wp" | "published" | "archived";
   wp_post_id: number | null; wp_link: string | null; wp_status: string | null; pushed_at: string | null; published_at: string | null;
-  last_error: string | null; created_by: string | null; created_at: string; updated_at: string;
+  last_error: string | null; gsc_submitted_at: string | null; created_by: string | null; created_at: string; updated_at: string;
 };
 type ArticleMediaMapRow = { id: string; brand_id: string; source_url: string; wp_media_id: number; wp_url: string; created_at: string };
 type GenerationJobRow = {

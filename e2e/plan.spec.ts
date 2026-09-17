@@ -30,6 +30,7 @@ test("plan: schedule, build week, nothing auto-approved, approve day, calendar",
   await page.getByRole("option", { name: brandName }).click();
   await seed(slug);
 
+  await page.goto(`/brands/${slug}/settings`);
   await page.getByLabel("Facebook Mon").fill("15:30");
   await page.getByLabel("Instagram Mon").fill("17:30");
   await page.getByLabel("Facebook Wed").fill("15:30");

@@ -43,6 +43,6 @@ export async function setBrandActive(id: string, active: boolean): Promise<Actio
   const { error } = await supabase.from("brands").update({ active }).eq("id", id);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/brands");
-  revalidatePath("/dashboard");
+  revalidatePath("/brands/[slug]", "page");
   return { ok: true };
 }

@@ -50,7 +50,7 @@ test("login, create brand, upload image, see it in library", async ({ page }) =>
   await page.getByRole("button", { name: "Delete" }).click();
   await expect(page.getByText("No images yet")).toBeVisible();
 
-  await page.goto(`/brands/${slug}`);
+  await page.goto(`/brands/${slug}/settings`);
   await page.getByRole("button", { name: "Archive" }).click();
   await expect(page.getByText("Archived")).toBeVisible();
 });

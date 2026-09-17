@@ -1,53 +1,76 @@
 import { createServerSupabase } from "@/lib/supabase/server";
-import { listBrands, type Brand } from "@/lib/brands/queries";
-import { PROVIDER_ORDER, type Provider } from "@/lib/connections";
-import { countJobsByStatus } from "@/lib/jobs/queries";
-import type { Database } from "@/lib/database.types";
+import type { Brand } from "@/lib/brands/queries";
+import { PROVIDER_ORDER } from "@/lib/connections";
+import { listConnectionsForBrand, getConnectionWithSecret } from "@/lib/connections/queries";
+import type { MetaConfig, MetaSecret } from "@/lib/connections/meta";
+import { env } from "@/lib/env";
+import { listCategories } from "@/lib/categories/queries";
+import { computeContentMix, type ContentMix } from "@/lib/ai/content-mix";
+import { createSupabaseStore } from "@/lib/ai/store";
+import { createSupabaseLinksStore } from "@/lib/links/store";
+import { listImportsForBrand } from "@/lib/seo/queries";
+import { dataFreshness } from "@/lib/seo/freshness";
+import { summariseNeedsYou, deriveHealthChecks, gscQueue, type NeedsYou, type Health } from "./brand-summary";
 
-type ConnectionStatus = Database["public"]["Enums"]["connection_status"];
-export type DashboardBrand = Brand & {
-  connections: Record<Provider, ConnectionStatus | "missing">;
-  media_count: number;
-  pending_approval_count: number;
-  next_scheduled: { at: string; title: string } | null;
-  article_draft_count: number;
-  jobs: { running: number; failed: number };
+export type BrandDashboard = {
+  needs: NeedsYou;
+  health: Health;
+  mix: ContentMix;
+  gsc: { id: string; title: string; wp_link: string }[];
+  freshness: ReturnType<typeof dataFreshness>;
 };
 
-export async function getDashboardBrands(): Promise<DashboardBrand[]> {
+export async function getBrandDashboard(brand: Brand): Promise<BrandDashboard> {
   const supabase = await createServerSupabase();
-  const brands = await listBrands();
-  const ids = brands.map((b) => b.id);
-  if (ids.length === 0) return [];
-
-  const nowIso = new Date().toISOString();
-  const [{ data: conns, error: cErr }, { data: media, error: mErr }, { data: pendingPosts }, { data: upcoming }, { data: draftArticles }] = await Promise.all([
-    supabase.from("brand_connections").select("brand_id,provider,status").in("brand_id", ids),
-    supabase.from("media_assets").select("brand_id").in("brand_id", ids),
-    supabase.from("posts").select("brand_id").in("brand_id", ids).eq("status", "pending_approval"),
-    supabase
-      .from("post_targets")
-      .select("scheduled_at, post:posts!inner(brand_id,title,status)")
-      .eq("status", "pending")
-      .in("post.brand_id", ids)
-      .in("post.status", ["approved", "publishing"])
-      .gte("scheduled_at", nowIso)
-      .order("scheduled_at", { ascending: true }),
-    supabase.from("articles").select("brand_id").in("brand_id", ids).eq("status", "draft"),
+  const now = new Date();
+  const [posts, targets, pins, jobs, links, connections, meta, syncRuns, articles, categories, recent, imports] = await Promise.all([
+    supabase.from("posts").select("status").eq("brand_id", brand.id).neq("status", "archived"),
+    supabase.from("post_targets").select("status,scheduled_at,published_at,post:posts!inner(brand_id,status)").eq("post.brand_id", brand.id),
+    supabase.from("pins").select("status,scheduled_at,published_at").eq("brand_id", brand.id).neq("status", "archived"),
+    supabase.from("generation_jobs").select("status,runner").eq("brand_id", brand.id).in("status", ["queued", "claimed", "running", "failed"]),
+    createSupabaseLinksStore().counts(brand.id),
+    listConnectionsForBrand(brand.id),
+    getConnectionWithSecret<MetaConfig, MetaSecret>(brand.id, "meta").catch(() => null),
+    supabase.from("sync_runs").select("source,last_ok_at,last_error").eq("brand_id", brand.id),
+    supabase.from("articles").select("id,title,status,wp_link,pushed_at,gsc_submitted_at").eq("brand_id", brand.id).in("status", ["pushed_to_wp", "published"]),
+    listCategories(brand.id),
+    createSupabaseStore().listRecentCategorizedPosts(brand.id),
+    listImportsForBrand(brand.id),
   ]);
-  if (cErr) throw new Error(cErr.message);
-  if (mErr) throw new Error(mErr.message);
-  const jobCounts = await countJobsByStatus(ids);
-  type Up = { scheduled_at: string | null; post: { brand_id: string; title: string } };
+  for (const r of [posts, targets, pins, jobs, syncRuns, articles]) if (r.error) throw new Error(r.error.message);
 
-  return brands.map((b) => {
-    const connections = Object.fromEntries(PROVIDER_ORDER.map((p) => [p, "missing"])) as DashboardBrand["connections"];
-    for (const c of conns ?? []) if (c.brand_id === b.id) connections[c.provider as Provider] = c.status;
-    const media_count = (media ?? []).filter((m) => m.brand_id === b.id).length;
-    const pending_approval_count = (pendingPosts ?? []).filter((p) => p.brand_id === b.id).length;
-    const nextUp = ((upcoming ?? []) as unknown as Up[]).find((u) => u.post.brand_id === b.id && u.scheduled_at);
-    const next_scheduled = nextUp ? { at: nextUp.scheduled_at!, title: nextUp.post.title } : null;
-    const article_draft_count = (draftArticles ?? []).filter((a) => a.brand_id === b.id).length;
-    return { ...b, connections, media_count, pending_approval_count, next_scheduled, article_draft_count, jobs: jobCounts[b.id] ?? { running: 0, failed: 0 } };
-  });
+  type TargetRow = { status: string; scheduled_at: string | null; published_at: string | null; post: { brand_id: string; status: string } };
+  const targetRows = (targets.data ?? []) as unknown as TargetRow[];
+  const failingConnections = connections.filter((c) => c.status === "failing").length;
+
+  const needs = summariseNeedsYou(
+    {
+      posts: posts.data ?? [],
+      targets: targetRows.map((t) => ({ status: t.status, scheduled_at: t.scheduled_at, post_status: t.post.status })),
+      pins: pins.data ?? [],
+      jobs: jobs.data ?? [],
+      pendingLinks: links.pending,
+      failingConnections,
+    },
+    now,
+  );
+
+  const publishedAts = [...targetRows.map((t) => t.published_at), ...(pins.data ?? []).map((p) => p.published_at)].filter((x): x is string => Boolean(x)).sort();
+  const health = deriveHealthChecks(
+    {
+      slug: brand.slug,
+      providers: [...PROVIDER_ORDER, ...(env.GBP_ENABLED === "true" ? (["gbp"] as const) : [])],
+      connections,
+      metaExpiresAt: meta?.secret.expires_at ?? null,
+      overdue: needs.attention.overdue,
+      lastPublishedAt: publishedAts.at(-1) ?? null,
+      syncRuns: syncRuns.data ?? [],
+    },
+    now,
+  );
+
+  const mix = computeContentMix(categories, recent);
+  const gsc = gscQueue(articles.data ?? []).map((a) => ({ id: a.id, title: a.title, wp_link: a.wp_link! }));
+
+  return { needs, health, mix, gsc, freshness: dataFreshness(imports, now) };
 }

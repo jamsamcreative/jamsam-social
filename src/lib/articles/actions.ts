@@ -30,7 +30,7 @@ async function load(id: string): Promise<Loaded> {
 function refresh(id?: string) {
   revalidatePath("/blog");
   if (id) revalidatePath(`/blog/${id}`);
-  revalidatePath("/dashboard");
+  revalidatePath("/brands/[slug]", "page");
 }
 
 export async function saveArticle(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
@@ -220,4 +220,24 @@ export async function refreshTerms(brandId: string): Promise<ActionResult> {
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }
+}
+
+async function setGscSubmitted(id: string, value: string | null): Promise<ActionResult> {
+  const loaded = await load(id);
+  if (loaded.error) return { ok: false, error: loaded.error };
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.from("articles").update({ gsc_submitted_at: value }).eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  refresh(id);
+  return { ok: true, id };
+}
+
+/** Dashboard "done": the person has requested indexing in Search Console. */
+export async function markSubmittedToSearchConsole(id: string): Promise<ActionResult> {
+  return setGscSubmitted(id, new Date().toISOString());
+}
+
+/** Article page reset for a mis-clicked "done". */
+export async function unmarkSubmittedToSearchConsole(id: string): Promise<ActionResult> {
+  return setGscSubmitted(id, null);
 }

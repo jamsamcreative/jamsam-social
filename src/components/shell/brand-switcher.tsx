@@ -1,16 +1,27 @@
 "use client";
 import { useTransition } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { setCurrentBrand } from "@/lib/current-brand";
 import type { Brand } from "@/lib/brands/queries";
+import { brandSwitchTarget } from "./brand-switch-target";
 
 export function BrandSwitcher({ brands, current }: { brands: Brand[]; current: string | null }) {
   const [pending, start] = useTransition();
+  const pathname = usePathname();
+  const router = useRouter();
   if (brands.length === 0) return <span className="text-sm text-muted-foreground">No brands yet</span>;
   return (
     <Select
       value={current ?? undefined}
-      onValueChange={(slug) => slug && start(() => setCurrentBrand(slug))}
+      onValueChange={(slug) =>
+        slug &&
+        start(async () => {
+          await setCurrentBrand(slug);
+          const target = brandSwitchTarget(pathname, slug);
+          if (target) router.push(target);
+        })
+      }
       disabled={pending}
       items={brands.map((b) => ({ value: b.slug, label: b.name }))}
     >
