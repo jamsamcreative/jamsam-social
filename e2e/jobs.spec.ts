@@ -38,7 +38,7 @@ test("content-mix category, queue an MCP article job, cancel it", async ({ page 
   await page.getByLabel("Runner").selectOption("mcp");
   await page.getByRole("button", { name: "Write blog post" }).click();
   await expect(page).toHaveURL(/\/jobs/);
-  const row = page.getByRole("row").filter({ hasText: "Article" }).filter({ hasText: "Queued" }).first();
+  const row = page.getByRole("row").filter({ hasText: "Blog post" }).filter({ hasText: "Queued" }).first();
   await expect(row).toBeVisible();
   await row.getByRole("button", { name: "Cancel" }).click();
   await expect(page.getByRole("row").filter({ hasText: "Cancelled" }).first()).toBeVisible();
