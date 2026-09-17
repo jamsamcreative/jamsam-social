@@ -1,5 +1,5 @@
 // In-memory LinksStore used by Internal Links tests. Never imported by app code.
-import { planScanUpsert, type LinksStore, type LinkSuggestionRow } from "./store";
+import { groupRejected, planScanUpsert, type LinksStore, type LinkSuggestionRow } from "./store";
 import type { LinkEdge, PageLite } from "./types";
 
 export const BRAND = { id: "b1", slug: "acme", name: "Acme", website_url: "https://acme.com" };
@@ -40,6 +40,7 @@ export function fakeLinksStore(seed: { pages?: FakePage[]; brands?: { id: string
     async rejectedKeys(brandId, orphanId) {
       return new Set(store.suggestions.filter((s) => s.brand_id === brandId && s.orphan_page_id === orphanId && s.status === "rejected" && s.host_page_id && s.phrase).map((s) => `${s.host_page_id}|${s.phrase}`));
     },
+    async rejectedKeysForBrand(brandId) { return groupRejected(store.suggestions.filter((s) => s.brand_id === brandId && s.status === "rejected")); },
     async upsertScanResults(brandId, results, orphanIds) {
       const plan = planScanUpsert(store.suggestions.filter((s) => s.brand_id === brandId), results, orphanIds);
       const del = new Set(plan.deleteIds), stale = new Set(plan.staleIds);

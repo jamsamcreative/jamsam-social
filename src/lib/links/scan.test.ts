@@ -39,6 +39,24 @@ describe("scanBrand", () => {
     expect(store.imports).toHaveLength(1);
   });
 
+  it("loads rejected keys for the whole brand in one call and never re-proposes a rejected (host, phrase) for that orphan", async () => {
+    const store = seed();
+    const now = new Date().toISOString();
+    store.suggestions.push({
+      id: "r1", brand_id: BRAND.id, orphan_page_id: "c", host_page_id: "b", phrase: "horse barns", context: null, status: "rejected", reason: null, phrases_tried: [],
+      href: null, undo_snippet: null, applied_at: null, applied_by: null, created_at: now, updated_at: now,
+    });
+    const perOrphan = vi.spyOn(store, "rejectedKeys");
+    const forBrand = vi.spyOn(store, "rejectedKeysForBrand");
+
+    const out = await scanBrand(store, { brandId: BRAND.id, userId: null, mirror: async () => ({ pages: 3, mirrored: mirrored(store) }) });
+
+    expect(perOrphan).not.toHaveBeenCalled();
+    expect(forBrand).toHaveBeenCalledTimes(1);
+    expect(out).toMatchObject({ orphans: 2, suggested: 0, none: 2 });
+    expect((await store.listSuggestions(BRAND.id, ["none"])).map((r) => r.orphan_page_id).sort()).toEqual(["a", "c"]);
+  });
+
   it("replaces stale edges from a previous scan", async () => {
     const store = seed();
     await store.addEdge(BRAND.id, { from_page_id: "c", to_page_id: "a", href: "https://acme.com/a", anchor_text: "old" });

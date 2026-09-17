@@ -24,6 +24,8 @@ export interface LinksStore {
   getSuggestion(id: string): Promise<LinkSuggestionRow | null>;
   /** `${host}|${phrase}` for every rejected row of this orphan — never re-proposed. */
   rejectedKeys(brandId: string, orphanId: string): Promise<Set<string>>;
+  /** The same keys for every orphan of the brand in one query, keyed by orphan page id (the scan's bulk path). */
+  rejectedKeysForBrand(brandId: string): Promise<Map<string, Set<string>>>;
   /** See `planScanUpsert` for the exact keep / stale / remove rules. */
   upsertScanResults(brandId: string, results: (Suggestion | NoneVerdict)[], orphanIds: string[]): Promise<{ created: number; staled: number; removed: number }>;
   setStatus(id: string, patch: Partial<Pick<LinkSuggestionRow, "status" | "href" | "undo_snippet" | "applied_at" | "applied_by">>): Promise<void>;
@@ -71,6 +73,17 @@ export function planScanUpsert(existing: Pick<LinkSuggestionRow, "id" | "orphan_
 }
 
 const fail = (e: { message: string }): never => { throw new Error(e.message); };
+/** `${host}|${phrase}` keys of rejected rows grouped by orphan; rows without a host or phrase carry nothing to avoid. */
+export function groupRejected(rows: { orphan_page_id: string; host_page_id: string | null; phrase: string | null }[]): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  for (const r of rows) {
+    if (!r.host_page_id || !r.phrase) continue;
+    let set = out.get(r.orphan_page_id);
+    if (!set) out.set(r.orphan_page_id, (set = new Set()));
+    set.add(`${r.host_page_id}|${r.phrase}`);
+  }
+  return out;
+}
 const PAGE_COLS = "id,wp_id,type,slug,url,title,focus_keyword,content_text,modified_at";
 type PageRow = { id: string; wp_id: number; type: string; slug: string; url: string; title: string; focus_keyword: string | null; content_text: string | null; modified_at: string | null };
 const toPage = (p: PageRow): PageLite & { wp_id: number } => ({ id: p.id, wp_id: p.wp_id, type: p.type === "page" ? "page" : "post", slug: p.slug, url: p.url, title: p.title, focus_keyword: p.focus_keyword, content_text: p.content_text ?? "", modified_at: p.modified_at });
@@ -141,6 +154,11 @@ export function createSupabaseLinksStore(): LinksStore {
       const { data, error } = await admin.from("link_suggestions").select("host_page_id,phrase").eq("brand_id", brandId).eq("orphan_page_id", orphanId).eq("status", "rejected");
       if (error) fail(error);
       return new Set((data ?? []).filter((r) => r.host_page_id && r.phrase).map((r) => `${r.host_page_id}|${r.phrase}`));
+    },
+    async rejectedKeysForBrand(brandId) {
+      const { data, error } = await admin.from("link_suggestions").select("orphan_page_id,host_page_id,phrase").eq("brand_id", brandId).eq("status", "rejected").limit(50000);
+      if (error) fail(error);
+      return groupRejected(data ?? []);
     },
     async upsertScanResults(brandId, results, orphanIds) {
       const { data, error } = await admin.from("link_suggestions").select("id,orphan_page_id,host_page_id,phrase,status").eq("brand_id", brandId).in("status", ["pending", "none"]);

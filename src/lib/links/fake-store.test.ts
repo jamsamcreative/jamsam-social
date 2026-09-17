@@ -106,3 +106,20 @@ describe("fakeLinksStore edges, pages, scans and counts", () => {
     expect(await s.counts()).toEqual({ pages: 2, pending: 0, added: 1 });
   });
 });
+
+describe("fakeLinksStore.rejectedKeysForBrand", () => {
+  it("groups rejected host|phrase keys by orphan, skipping other brands, other statuses and rows without a host/phrase", async () => {
+    const s = fakeLinksStore({ pages: [page("o1"), page("o2"), page("h1"), page("h2")] });
+    await s.upsertScanResults(B, [sug("o1", "h1", "pole barn"), sug("o2", "h2", "shop plans")], ["o1", "o2"]);
+    const [r1, r2] = await s.listSuggestions(B);
+    await s.setStatus(r1.id, { status: "rejected" });
+    await s.setStatus(r2.id, { status: "stale" });
+    const now = new Date().toISOString();
+    s.suggestions.push({ id: "x", brand_id: "other", orphan_page_id: "o1", host_page_id: "h1", phrase: "elsewhere", context: null, status: "rejected", reason: null, phrases_tried: [], href: null, undo_snippet: null, applied_at: null, applied_by: null, created_at: now, updated_at: now });
+    s.suggestions.push({ id: "y", brand_id: B, orphan_page_id: "o2", host_page_id: null, phrase: null, context: null, status: "rejected", reason: null, phrases_tried: [], href: null, undo_snippet: null, applied_at: null, applied_by: null, created_at: now, updated_at: now });
+
+    const m = await s.rejectedKeysForBrand(B);
+    expect([...m.entries()].map(([k, v]) => [k, [...v]])).toEqual([["o1", ["h1|pole barn"]]]);
+    expect(await s.rejectedKeys(B, "o1")).toEqual(new Set(["h1|pole barn"]));
+  });
+});

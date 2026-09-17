@@ -35,11 +35,8 @@ export async function scanBrand(store: LinksStore, i: { brandId: string; userId:
   await store.replaceEdges(i.brandId, edges);
 
   const orphans = findOrphans(pages, edges);
-  const results: (Suggestion | NoneVerdict)[] = [];
-  for (const { page } of orphans) {
-    const rejected = await store.rejectedKeys(i.brandId, page.id);
-    results.push(suggestFor(page, pages, edges, rejected));
-  }
+  const rejected = await store.rejectedKeysForBrand(i.brandId);
+  const results: (Suggestion | NoneVerdict)[] = orphans.map(({ page }) => suggestFor(page, pages, edges, rejected.get(page.id) ?? new Set()));
   await store.upsertScanResults(i.brandId, results, orphans.map((o) => o.page.id));
 
   const suggested = results.filter(isSuggestion).length;
