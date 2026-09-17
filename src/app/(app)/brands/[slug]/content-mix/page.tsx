@@ -14,7 +14,9 @@ export default async function ContentMixPage({ params }: { params: Promise<{ slu
   const mix = computeContentMix(categories, await createSupabaseStore().listRecentCategorizedPosts(brand.id));
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">{brand.name}</h1>
+      <h1 className="text-2xl font-semibold">
+        {brand.name} <span className="text-muted-foreground">· Settings</span>
+      </h1>
       <BrandNav slug={slug} />
       <p className="text-sm text-muted-foreground">
         Target share of each post category. The generator favours whichever category is furthest under target across the last {mix.window} approved/published posts ({mix.total} so far).

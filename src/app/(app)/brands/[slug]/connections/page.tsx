@@ -20,7 +20,9 @@ export default async function ConnectionsPage({ params }: { params: Promise<{ sl
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">{brand.name}</h1>
+      <h1 className="text-2xl font-semibold">
+        {brand.name} <span className="text-muted-foreground">· Settings</span>
+      </h1>
       <BrandNav slug={brand.slug} />
       <Suspense fallback={null}>
         <ConnectionsToast />

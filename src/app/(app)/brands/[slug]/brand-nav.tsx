@@ -6,13 +6,16 @@ import { cn } from "@/lib/utils";
 export function BrandNav({ slug }: { slug: string }) {
   const pathname = usePathname();
   const tabs = [
-    { href: `/brands/${slug}`, label: "Overview" },
+    { href: `/brands/${slug}/settings`, label: "General" },
     { href: `/brands/${slug}/connections`, label: "Connections" },
     { href: `/brands/${slug}/guidelines`, label: "Guidelines" },
     { href: `/brands/${slug}/content-mix`, label: "Content mix" },
   ];
   return (
-    <nav className="flex gap-1 border-b">
+    <nav className="flex items-center gap-1 border-b">
+      <Link href={`/brands/${slug}`} className="mr-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground">
+        ← Dashboard
+      </Link>
       {tabs.map((t) => (
         <Link
           key={t.href}
