@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { fetchWithTimeout } from "@/lib/connections/http";
+import { fetchWithTimeout, errorMessage } from "@/lib/connections/http";
 
 describe("fetchWithTimeout", () => {
   it("passes through a fast response", async () => {
@@ -15,5 +15,22 @@ describe("fetchWithTimeout", () => {
         }),
     );
     await expect(fetchWithTimeout("https://x", {}, 20, f as unknown as typeof fetch)).rejects.toThrow(/timed out/i);
+  });
+});
+
+describe("errorMessage", () => {
+  it("returns the message for a plain error", () => {
+    expect(errorMessage(new Error("boom"))).toBe("boom");
+  });
+  it("appends the cause code when fetch fails at the network level", () => {
+    const e = new Error("fetch failed", { cause: Object.assign(new Error("connect ECONNRESET"), { code: "ECONNRESET" }) });
+    expect(errorMessage(e)).toBe("fetch failed (ECONNRESET: connect ECONNRESET)");
+  });
+  it("falls back to the cause message when it has no code", () => {
+    const e = new Error("fetch failed", { cause: new Error("certificate has expired") });
+    expect(errorMessage(e)).toBe("fetch failed (certificate has expired)");
+  });
+  it("stringifies non-Error values", () => {
+    expect(errorMessage("nope")).toBe("nope");
   });
 });
