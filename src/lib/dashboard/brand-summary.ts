@@ -128,3 +128,8 @@ export function gscQueue<T extends GscArticle>(articles: T[]): T[] {
     .filter((a) => a.wp_link && (a.status === "pushed_to_wp" || a.status === "published") && !a.gsc_submitted_at)
     .sort((a, b) => (b.pushed_at ?? "").localeCompare(a.pushed_at ?? ""));
 }
+
+/** Overview ordering: most to do first, failures ahead of mere approvals, then alphabetical. */
+export function sortByNeeds<T extends { name: string; needs: { total: number; attention: { count: number } } }>(brands: T[]): T[] {
+  return [...brands].sort((a, b) => b.needs.total - a.needs.total || b.needs.attention.count - a.needs.attention.count || a.name.localeCompare(b.name));
+}

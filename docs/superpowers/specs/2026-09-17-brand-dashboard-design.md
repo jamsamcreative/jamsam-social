@@ -11,9 +11,9 @@ Clicking a brand opens a dashboard that answers, in order: what needs a person r
 - `/brands/[slug]` — the brand dashboard. Sections top to bottom: Needs you, System health, Content quality, Submit to Search Console, freshness footer. Header: brand name, `Archived` badge when inactive, a **Settings** button → `/brands/[slug]/settings`.
 - `/brands/[slug]/settings` (new) — the current Overview content: slug / website / timezone / SEO suffix, Edit and Archive/Restore buttons, posting schedule form, history import.
 - `/brands/[slug]/connections`, `/guidelines`, `/content-mix` keep their URLs (OAuth callbacks and several components redirect to them). `BrandNav` becomes a settings tab strip — **General · Connections · Guidelines · Content mix** — rendered on those four pages only, never on the dashboard.
-- `/dashboard` redirects to `/brands/<current brand slug>`; with no brands it redirects to `/brands/new`. Sidebar keeps linking to `/dashboard`.
+- `/dashboard` — the all-brands overview (added 2026-09-21): one card per active brand with the Needs-you counts, a failing-connections dot and a **New brand** button; sorted by `sortByNeeds`. Cards link to `/brands/[slug]`. Data from `listBrandOverviews()`, the Needs-you subset of `getBrandDashboard`.
 - Brand switcher: after `setCurrentBrand(slug)`, if the current pathname matches `/brands/<oldSlug>(/rest)?` it navigates to `/brands/<newSlug>(/rest)`; otherwise it stays on the page (current behaviour, the page re-renders for the new brand).
-- The global brand-card grid and `getDashboardBrands` are deleted.
+- `getDashboardBrands` and the old connection-status grid are deleted.
 
 ## 2. Needs you
 

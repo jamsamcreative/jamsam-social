@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { summariseNeedsYou, isOverdue, deriveHealthChecks, gscQueue, type NeedsYouInput, type HealthInput } from "@/lib/dashboard/brand-summary";
+import { summariseNeedsYou, isOverdue, deriveHealthChecks, gscQueue, sortByNeeds, type NeedsYouInput, type HealthInput } from "@/lib/dashboard/brand-summary";
 
 const now = new Date("2026-09-17T12:00:00Z");
 const ago = (min: number) => new Date(now.getTime() - min * 60_000).toISOString();
@@ -133,5 +133,22 @@ describe("gscQueue", () => {
   it("orders newest push first, null pushed_at last", () => {
     const r = gscQueue([a({ id: "old", pushed_at: "2026-09-01T00:00:00Z" }), a({ id: "none", pushed_at: null }), a({ id: "new", pushed_at: "2026-09-15T00:00:00Z" })]);
     expect(r.map((x) => x.id)).toEqual(["new", "old", "none"]);
+  });
+});
+
+describe("sortByNeeds", () => {
+  const brand = (name: string, total: number, attention = 0) => ({ name, needs: { total, attention: { count: attention } } });
+  it("puts the brand needing the most attention first, then by name", () => {
+    const out = sortByNeeds([brand("Zed", 0), brand("Acme", 3), brand("Mid", 3), brand("Bee", 0)]);
+    expect(out.map((b) => b.name)).toEqual(["Acme", "Mid", "Bee", "Zed"]);
+  });
+  it("breaks a tie on total by attention count (failures outrank approvals)", () => {
+    const out = sortByNeeds([brand("Calm", 2, 0), brand("Broken", 2, 2)]);
+    expect(out.map((b) => b.name)).toEqual(["Broken", "Calm"]);
+  });
+  it("does not mutate its input", () => {
+    const input = [brand("B", 0), brand("A", 1)];
+    sortByNeeds(input);
+    expect(input.map((b) => b.name)).toEqual(["B", "A"]);
   });
 });

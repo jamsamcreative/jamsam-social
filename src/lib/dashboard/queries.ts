@@ -10,7 +10,8 @@ import { createSupabaseStore } from "@/lib/ai/store";
 import { createSupabaseLinksStore } from "@/lib/links/store";
 import { listImportsForBrand } from "@/lib/seo/queries";
 import { dataFreshness } from "@/lib/seo/freshness";
-import { summariseNeedsYou, deriveHealthChecks, gscQueue, type NeedsYou, type Health } from "./brand-summary";
+import { listBrands } from "@/lib/brands/queries";
+import { summariseNeedsYou, deriveHealthChecks, gscQueue, sortByNeeds, type NeedsYou, type Health } from "./brand-summary";
 
 export type BrandDashboard = {
   needs: NeedsYou;
@@ -73,4 +74,42 @@ export async function getBrandDashboard(brand: Brand): Promise<BrandDashboard> {
   const gsc = gscQueue(articles.data ?? []).map((a) => ({ id: a.id, title: a.title, wp_link: a.wp_link! }));
 
   return { needs, health, mix, gsc, freshness: dataFreshness(imports, now) };
+}
+
+export type BrandOverview = Pick<Brand, "id" | "slug" | "name" | "website_url"> & { needs: NeedsYou; failingConnections: number };
+
+/** The all-brands overview: just the Needs-you inputs per brand (a subset of getBrandDashboard's reads). */
+export async function listBrandOverviews(): Promise<BrandOverview[]> {
+  const supabase = await createServerSupabase();
+  const now = new Date();
+  const brands = await listBrands();
+  const rows = await Promise.all(
+    brands.map(async (brand) => {
+      const [posts, targets, pins, jobs, links, connections] = await Promise.all([
+        supabase.from("posts").select("status").eq("brand_id", brand.id).neq("status", "archived"),
+        supabase.from("post_targets").select("status,scheduled_at,post:posts!inner(brand_id,status)").eq("post.brand_id", brand.id),
+        supabase.from("pins").select("status,scheduled_at").eq("brand_id", brand.id).neq("status", "archived"),
+        supabase.from("generation_jobs").select("status,runner").eq("brand_id", brand.id).in("status", ["queued", "claimed", "running", "failed"]),
+        createSupabaseLinksStore().counts(brand.id),
+        listConnectionsForBrand(brand.id),
+      ]);
+      for (const r of [posts, targets, pins, jobs]) if (r.error) throw new Error(r.error.message);
+      type TargetRow = { status: string; scheduled_at: string | null; post: { brand_id: string; status: string } };
+      const targetRows = (targets.data ?? []) as unknown as TargetRow[];
+      const failingConnections = connections.filter((c) => c.status === "failing").length;
+      const needs = summariseNeedsYou(
+        {
+          posts: posts.data ?? [],
+          targets: targetRows.map((t) => ({ status: t.status, scheduled_at: t.scheduled_at, post_status: t.post.status })),
+          pins: pins.data ?? [],
+          jobs: jobs.data ?? [],
+          pendingLinks: links.pending,
+          failingConnections,
+        },
+        now,
+      );
+      return { id: brand.id, slug: brand.slug, name: brand.name, website_url: brand.website_url, needs, failingConnections };
+    }),
+  );
+  return sortByNeeds(rows);
 }
