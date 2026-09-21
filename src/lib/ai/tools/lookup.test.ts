@@ -9,9 +9,18 @@ describe("lookup tools", () => {
     const out = (await listBrands.run(ctx(), {})) as { slug: string; connections: Record<string, string> }[];
     expect(out[0]).toMatchObject({ slug: "acme", connections: { wordpress: "connected" } });
   });
+  it("list_brands includes the brand's SEO tool identifiers", async () => {
+    const out = (await listBrands.run(ctx(), {})) as { seo_tools: unknown }[];
+    expect(out[0].seo_tools).toEqual(BRAND.seo_tools);
+  });
   it("get_brand_guidelines filters by kind and rejects unknown brands", async () => {
     expect(await getBrandGuidelines.run(ctx(), { brand: "acme", kind: "blog_style" })).toEqual({ blog_style: "Helpful." });
     await expect(getBrandGuidelines.run(ctx(), { brand: "nope" })).rejects.toThrow(/Unknown brand/);
+  });
+  it("get_brand_guidelines without a kind also returns seo_tools", async () => {
+    const out = (await getBrandGuidelines.run(ctx(), { brand: "acme" })) as Record<string, unknown>;
+    expect(out.blog_style).toBe("Helpful.");
+    expect(out.seo_tools).toEqual(BRAND.seo_tools);
   });
   it("get_content_mix computes from categories and recent posts", async () => {
     const store = fakeStore({

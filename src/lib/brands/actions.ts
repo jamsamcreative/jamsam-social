@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { brandInputSchema } from "./schema";
+import { seoToolsFormSchema } from "./seo-tools";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -44,5 +45,15 @@ export async function setBrandActive(id: string, active: boolean): Promise<Actio
   if (error) return { ok: false, error: error.message };
   revalidatePath("/brands");
   revalidatePath("/brands/[slug]", "page");
+  return { ok: true };
+}
+
+export async function saveSeoTools(brandId: string, slug: string, _prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  const parsed = seoToolsFormSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.from("brands").update({ seo_tools: parsed.data }).eq("id", brandId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath(`/brands/${slug}/connections`);
   return { ok: true };
 }

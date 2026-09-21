@@ -8,7 +8,8 @@ const KINDS = GUIDELINE_KINDS.map((k) => k.kind) as [GuidelineKind, ...Guideline
 
 export const listBrands = defineTool({
   name: "list_brands",
-  description: "List active brands with slug, name, timezone, website, SEO suffix and which connections are live (wordpress/meta/pinterest/semrush).",
+  description:
+    "List active brands with slug, name, timezone, website, SEO suffix, which connections are live (wordpress/meta/pinterest/semrush) and seo_tools: the brand's Local Falcon place_id + keywords and Ahrefs target domain/project to pass to those MCP tools.",
   input: z.object({}),
   run: (ctx) => ctx.store.listBrands(),
 });
@@ -16,12 +17,12 @@ export const listBrands = defineTool({
 export const getBrandGuidelines = defineTool({
   name: "get_brand_guidelines",
   description:
-    "Fetch a brand's writing rules. ALWAYS call this before writing anything. For captions read social_style + social_post_spec; for articles read blog_style + blog_post_spec. Omit kind to get every document.",
+    "Fetch a brand's writing rules. ALWAYS call this before writing anything. For captions read social_style + social_post_spec; for articles read blog_style + blog_post_spec. Omit kind to get every document plus seo_tools (Local Falcon place_id/keywords, Ahrefs target) for SEO research.",
   input: z.object({ brand, kind: z.enum(KINDS).optional() }),
   run: async (ctx, { brand: slug, kind }) => {
     const b = await requireBrand(ctx, slug);
     const docs = await ctx.store.getGuidelines(b.id);
-    return kind ? { [kind]: docs[kind] } : docs;
+    return kind ? { [kind]: docs[kind] } : { ...docs, seo_tools: b.seo_tools };
   },
 });
 

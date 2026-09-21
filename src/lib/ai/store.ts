@@ -4,6 +4,7 @@ import { getConnectionWithSecret } from "@/lib/connections/queries";
 import { createWpClient } from "@/lib/wordpress/client";
 import type { WordpressConfig, WordpressSecret } from "@/lib/connections/wordpress-shared";
 import { GUIDELINE_KINDS, type GuidelineKind } from "@/lib/guidelines/kinds";
+import { parseSeoTools, type SeoTools } from "@/lib/brands/seo-tools";
 import { MIX_WINDOW, type CategoryLike } from "./content-mix";
 import { boardStats } from "@/lib/pins/rules";
 import type { Database, Json, MediaItem, TermRef } from "@/lib/database.types";
@@ -11,9 +12,10 @@ import type { JobStatus, JobRunner, PlanMeta, CaptionResult } from "./schemas";
 
 type ArticleStatus = Database["public"]["Enums"]["article_status"];
 type PostStatus = Database["public"]["Enums"]["post_status"];
+type BrandRow = Database["public"]["Tables"]["brands"]["Row"];
 type ArticleRow = Database["public"]["Tables"]["articles"]["Row"];
 type PostRow = Database["public"]["Tables"]["posts"]["Row"];
-export type StoreBrand = { id: string; slug: string; name: string; timezone: string; website_url: string | null; seo_suffix: string | null };
+export type StoreBrand = { id: string; slug: string; name: string; timezone: string; website_url: string | null; seo_suffix: string | null; seo_tools: SeoTools };
 export type StoreJob = Database["public"]["Tables"]["generation_jobs"]["Row"];
 export type ArticleSummary = { id: string; brand_id: string; title: string; slug: string; status: ArticleStatus; url: string; primary_keyword: string | null; wp_link: string | null };
 export type ArticleFull = ArticleSummary & { content_html: string; excerpt: string | null; featured_media: MediaItem | null; published_at: string | null };
@@ -97,7 +99,7 @@ export function articleUrl(a: { wp_link: string | null; slug: string }, brand: {
   return `${base}/${a.slug}/`;
 }
 
-const BRAND_COLS = "id,slug,name,timezone,website_url,seo_suffix";
+const BRAND_COLS = "id,slug,name,timezone,website_url,seo_suffix,seo_tools";
 
 function fail(error: { message: string } | null): never {
   throw new Error(error?.message ?? "Database error");
@@ -105,11 +107,14 @@ function fail(error: { message: string } | null): never {
 
 type PostWithTargets = PostRow & { targets: PostTargetSummary[] };
 
+type BrandCols = Pick<BrandRow, "id" | "slug" | "name" | "timezone" | "website_url" | "seo_suffix" | "seo_tools">;
+const toStoreBrand = (b: BrandCols): StoreBrand => ({ ...b, seo_tools: parseSeoTools(b.seo_tools) });
+
 export function createSupabaseStore(admin = createAdminSupabase()): Store {
   async function brandFor(brandId: string): Promise<StoreBrand> {
     const { data } = await admin.from("brands").select(BRAND_COLS).eq("id", brandId).single();
     if (!data) throw new Error("Brand not found");
-    return data;
+    return toStoreBrand(data);
   }
   const summarizeArticle = (row: ArticleRow, brand: StoreBrand): ArticleSummary => ({
     id: row.id, brand_id: row.brand_id, title: row.title, slug: row.slug, status: row.status, primary_keyword: row.primary_keyword, wp_link: row.wp_link,
@@ -129,17 +134,17 @@ export function createSupabaseStore(admin = createAdminSupabase()): Store {
       ]);
       if (error) fail(error);
       return (brands ?? []).map((b) => ({
-        ...b,
+        ...toStoreBrand(b),
         connections: Object.fromEntries((conns ?? []).filter((c) => c.brand_id === b.id).map((c) => [c.provider, c.status])),
       }));
     },
     async getBrandBySlug(slug) {
       const { data } = await admin.from("brands").select(BRAND_COLS).eq("slug", slug).maybeSingle();
-      return data ?? null;
+      return data ? toStoreBrand(data) : null;
     },
     async getBrandById(id) {
       const { data } = await admin.from("brands").select(BRAND_COLS).eq("id", id).maybeSingle();
-      return data ?? null;
+      return data ? toStoreBrand(data) : null;
     },
     async getGuidelines(brandId) {
       const { data, error } = await admin.from("brand_guidelines").select("kind,body_md").eq("brand_id", brandId);

@@ -7,6 +7,8 @@ import { env } from "@/lib/env";
 import { createSupabaseStore } from "@/lib/ai/store";
 import { ConnectionCard } from "@/components/brands/connection-card";
 import { ConnectionsToast } from "@/components/brands/connections-toast";
+import { SeoToolsCards } from "@/components/brands/seo-tools-cards";
+import { parseSeoTools } from "@/lib/brands/seo-tools";
 import { Suspense } from "react";
 import { BrandNav } from "../brand-nav";
 
@@ -31,6 +33,7 @@ export default async function ConnectionsPage({ params }: { params: Promise<{ sl
         {[...PROVIDER_ORDER, ...(env.GBP_ENABLED === "true" ? (["gbp"] as const) : [])].map((p) => (
           <ConnectionCard key={p} brandId={brand.id} slug={brand.slug} provider={p} connection={connections.find((c) => c.provider === p) ?? null} serviceAccountEmail={serviceAccount()?.email ?? null} pinterestOauth={Boolean(env.PINTEREST_APP_ID && env.PINTEREST_APP_SECRET)} boards={p === "pinterest" ? boards : []} />
         ))}
+        <SeoToolsCards brandId={brand.id} slug={brand.slug} tools={parseSeoTools(brand.seo_tools)} websiteUrl={brand.website_url} />
       </div>
     </div>
   );

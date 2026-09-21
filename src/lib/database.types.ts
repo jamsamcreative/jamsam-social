@@ -3,7 +3,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 
 type BrandRow = {
   id: string; slug: string; name: string; website_url: string | null; timezone: string;
-  seo_suffix: string | null; active: boolean; created_at: string; updated_at: string;
+  seo_suffix: string | null; seo_tools: Json; active: boolean; created_at: string; updated_at: string;
 };
 type ConnectionRow = {
   id: string; brand_id: string; provider: "wordpress" | "meta" | "pinterest" | "semrush" | "google_analytics" | "search_console" | "meta_ads" | "gbp"; config: Json; secret: string | null;

@@ -4,7 +4,7 @@ import type { Store, StoreJob, PostSummary, ArticleFull, StoreMedia, SitePage, K
 import type { CategoryLike } from "./content-mix";
 import type { PlanMeta } from "./schemas";
 
-export const BRAND = { id: "b1", slug: "acme", name: "Acme", timezone: "America/Los_Angeles", website_url: "https://acme.com", seo_suffix: "| Acme" };
+export const BRAND = { id: "b1", slug: "acme", name: "Acme", timezone: "America/Los_Angeles", website_url: "https://acme.com", seo_suffix: "| Acme", seo_tools: { local_falcon: { place_id: "ChIJacme", keywords: ["acme roofing"] }, ahrefs: { target: "acme.com" } } };
 
 type Seed = { jobs?: StoreJob[]; posts?: PostSummary[]; articles?: ArticleFull[]; media?: StoreMedia[]; categories?: CategoryLike[]; sitePages?: SitePage[]; keywords?: Keyword[]; projects?: Project[]; articleRefs?: ArticleKeywordRef[]; gscQueryPages?: { query: string; page: string; position: number; clicks: number }[]; imports?: KeywordImport[]; boards?: PinBoardInfo[] };
 /** `posts` are mutable seeds; a post's plan lives in `plans` (set it there to make a post "planned"). */
